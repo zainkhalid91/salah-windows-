@@ -1,0 +1,95 @@
+name: Windows
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["windows-v*"]
+    paths: ["windows/**", ".github/workflows/windows.yml"]
+  pull_request:
+    paths: ["windows/**", ".github/workflows/windows.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: windows
+
+jobs:
+  test:
+    name: Core and CLI tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew :core:test :cli:installDist --no-daemon
+      - name: CLI smoke test
+        env:
+          SALAH_CONFIG_PATH: ${{ runner.temp }}/salah/config.json
+          SALAH_NOW: "2026-09-28T01:00:00+08:00"
+        run: |
+          S=cli/build/install/salah/bin/salah
+          $S --version
+          $S location set --lat 1.3521 --lon 103.8198 --tz Asia/Singapore --name Singapore
+          $S today --plain
+          test "$($S next --compact)" = "Fajr 05:36 (4h 36m)"
+          $S schedule --week --json > /dev/null
+          set +e; SALAH_CONFIG_PATH=${{ runner.temp }}/none.json $S today; test $? -eq 3
+
+  snapshots:
+    name: Design snapshots
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew :app:run --args="--snapshot $GITHUB_WORKSPACE/snapshots" --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snapshots
+          path: snapshots/*.png
+
+  package:
+    name: Windows installer
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build MSI and EXE
+        run: ./gradlew :core:test :app:packageMsi :app:packageExe :app:createDistributable --no-daemon
+      - name: Smoke-test the bundled salah command
+        shell: cmd
+        env:
+          SALAH_CONFIG_PATH: ${{ runner.temp }}\salah\config.json
+        run: |
+          set APPDIR=app\build\compose\binaries\main\app\Salah
+          dir /b %APPDIR%\app\resources
+          call %APPDIR%\app\resources\salah.cmd --version || exit /b 1
+          call %APPDIR%\app\resources\salah.cmd location set --lat 21.4225 --lon 39.8262 --tz Asia/Riyadh --name Mecca || exit /b 1
+          call %APPDIR%\app\resources\salah.cmd schedule --week --plain || exit /b 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Salah-Windows
+          path: |
+            windows/app/build/compose/binaries/main/msi/*.msi
+            windows/app/build/compose/binaries/main/exe/*.exe
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/windows-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Salah for Windows ${{ github.ref_name }}
+          files: |
+            windows/app/build/compose/binaries/main/msi/*.msi
+            windows/app/build/compose/binaries/main/exe/*.exe

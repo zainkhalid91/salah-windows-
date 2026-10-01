@@ -11,6 +11,8 @@ Red prayer timeline, light-gray digital display, pixel digits — a prayer clock
 
 - **Salah.app** — dashboard, schedule, reminders, settings, menu bar extra. The only component that schedules notifications.
 - **`salah` CLI** — prayer times, countdowns and schedules in the terminal; edits the same configuration.
+- **Windows** — the same app, reminders and CLI for Windows 10 and 11, built with Kotlin and Compose
+  Multiplatform. See [windows/README.md](windows/README.md).
 
 > Calculated prayer times are approximations. Your local authority may differ by several minutes;
 > use the per-prayer offsets in Settings (or `salah config set calculation.offsets.<prayer> <minutes>`) to match it.

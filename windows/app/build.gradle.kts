@@ -14,6 +14,8 @@ dependencies {
     implementation(project(":cli"))
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
+    // Dark title bar (DWM) and reading Windows' app mode without spawning processes.
+    implementation("net.java.dev.jna:jna-platform:5.15.0")
 }
 
 val appVersion = "1.2.0"
@@ -32,7 +34,7 @@ compose.desktop {
             copyright = "Salah contributors"
             appResourcesRootDir.set(project.layout.projectDirectory.dir("packaging/resources"))
             // java.net.http for city search and updates; the rest for TLS, prefs and the tray.
-            modules("java.net.http", "java.prefs", "jdk.crypto.ec", "jdk.accessibility", "java.naming", "jdk.localedata")
+            modules("jdk.unsupported", "java.net.http", "java.prefs", "jdk.crypto.ec", "jdk.accessibility", "java.naming", "jdk.localedata")
 
             windows {
                 iconFile.set(project.file("packaging/salah.ico"))

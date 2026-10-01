@@ -15,7 +15,7 @@ shares the macOS app's design, behaviour and config format.
 ## Install
 
 Download `Salah-<version>.msi` from the
-[Windows releases](https://github.com/zainkhalid91/salah/releases) and run it. It installs per user
+[Windows releases](https://github.com/zainkhalid91/salah-windows-/releases) and run it. It installs per user
 (no admin prompt) with a Start menu entry. The installer bundles its own Java runtime, so there's nothing
 else to install.
 
@@ -53,6 +53,7 @@ open the window, and right-click it to **Quit Salah completely**.
 | CLGeocoder | Open-Meteo geocoding for city search and time zones, BigDataCloud to name a coordinate |
 | Core Location | Windows Location Services (System.Device.Location via PowerShell) |
 | `~/Library/Application Support/Salah/config.json` | `%APPDATA%\Salah\config.json` |
+| Appearance: System / Light / Dark | Same three options. System follows Windows' "Choose your app mode" live, and the title bar turns dark with the app |
 | ⌘1–5, ⌘Q, ⌥⌘Q | Ctrl+1–5, Ctrl+W / Ctrl+Q (close to the notification area), Ctrl+Shift+Q (quit completely) |
 | Self-update from GitHub Releases | Checks this repo's releases daily; **Install** downloads the MSI and hands it to Windows Installer |
 

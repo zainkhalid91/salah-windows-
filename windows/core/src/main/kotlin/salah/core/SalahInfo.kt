@@ -5,7 +5,7 @@ object SalahInfo {
     const val CALCULATION_LIBRARY = "a Kotlin port of adhan-swift 1.4.0 (Batoul Apps, MIT License)"
     const val DOCUMENTATION_URL = "https://github.com/primayudantra/salah#readme"
     /** GitHub repository whose releases carry the Windows installer. Override with SALAH_RELEASES_REPO. */
-    val repository: String get() = System.getenv("SALAH_RELEASES_REPO")?.takeIf { it.isNotBlank() } ?: "zainkhalid91/salah"
+    val repository: String get() = System.getenv("SALAH_RELEASES_REPO")?.takeIf { it.isNotBlank() } ?: "zainkhalid91/salah-windows-"
     val releasesUrl: String get() = "https://github.com/$repository/releases"
 }
 

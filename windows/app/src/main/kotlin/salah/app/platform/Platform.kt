@@ -360,18 +360,4 @@ object WindowsIntegration {
         val f = File(d.directory, name)
         return if (f.name.lowercase(Locale.ROOT).endsWith(".$extension")) f else File(f.path + ".$extension")
     }
-
-    /** Whether Windows uses a dark taskbar (for the tray icon color). */
-    fun systemUsesDarkTaskbar(): Boolean {
-        if (!Platform.isWindows) return true
-        val out = runCatching {
-            val p = ProcessBuilder("reg", "query", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", "/v", "SystemUsesLightTheme")
-                .redirectErrorStream(true).start()
-            val t = p.inputStream.bufferedReader().readText(); p.waitFor(5, TimeUnit.SECONDS); t
-        }.getOrNull() ?: return true
-        return !out.contains("0x1")
-    }
-
-    @Suppress("unused")
-    fun nowForLogs(): String = Instant.now().toString()
 }

@@ -1,6 +1,5 @@
 package salah.app
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -26,7 +25,8 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import kotlinx.coroutines.delay
-import salah.app.platform.WindowsIntegration
+import salah.app.platform.WindowsTheme
+import salah.app.platform.systemDarkTheme
 import salah.app.ui.RootView
 import salah.app.ui.SalahTheme
 import salah.app.ui.ScheduleSpan
@@ -87,7 +87,7 @@ fun main(args: Array<String>) {
         showRequest = { model.showMainWindow() }
 
         val dark = when (model.config.display.theme) {
-            ThemeSetting.SYSTEM -> isSystemInDarkTheme()
+            ThemeSetting.SYSTEM -> systemDarkTheme()
             ThemeSetting.LIGHT -> false
             ThemeSetting.DARK -> true
         }
@@ -114,6 +114,8 @@ fun main(args: Array<String>) {
                     window.requestFocus()
                 }
             }
+            // Match the native title bar to the app, so dark mode is dark edge to edge.
+            LaunchedEffect(dark) { WindowsTheme.applyTitleBar(window, dark) }
             SalahTheme(dark) { RootView(model) }
         }
 
@@ -172,7 +174,7 @@ private fun ApplicationScope.NotificationAreaIcon(model: AppModel, dark: Boolean
     val remindersItem = remember { MenuItem("Turn reminders off") }
 
     val icon = remember {
-        val darkTaskbar = WindowsIntegration.systemUsesDarkTaskbar()
+        val darkTaskbar = WindowsTheme.taskbarIsDark()
         TrayIcon(moonImage(if (darkTaskbar) Color(0xFFFFFF) else Color(0x1A1A1A)), "Salah").apply { isImageAutoSize = true }
     }
     DisposableEffect(icon) {

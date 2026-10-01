@@ -50,3 +50,18 @@ compose.desktop {
         buildTypes.release.proguard { isEnabled.set(false) }
     }
 }
+
+// Compose's jlink step strips java.exe from the bundled runtime; the `salah` command (salah.cmd)
+// needs it. Copy it back from the same JDK that built the runtime, so versions always match.
+tasks.matching { it.name == "createRuntimeImage" }.configureEach {
+    doLast {
+        if (!System.getProperty("os.name").lowercase().startsWith("windows")) return@doLast
+        val runtimeBin = layout.buildDirectory.dir("compose/tmp/main/runtime/bin").get().asFile.apply { mkdirs() }
+        val jdkBin = File(System.getProperty("java.home"), "bin")
+        for (name in listOf("java.exe", "jli.dll")) {
+            val target = runtimeBin.resolve(name)
+            if (!target.exists()) jdkBin.resolve(name).copyTo(target)
+        }
+        check(runtimeBin.resolve("java.exe").exists()) { "java.exe missing from bundled runtime" }
+    }
+}

@@ -79,6 +79,23 @@ jobs:
           call %APPDIR%\app\resources\salah.cmd --version || exit /b 1
           call %APPDIR%\app\resources\salah.cmd location set --lat 21.4225 --lon 39.8262 --tz Asia/Riyadh --name Mecca || exit /b 1
           call %APPDIR%\app\resources\salah.cmd schedule --week --plain || exit /b 1
+      - name: Launch the packaged app (self-test)
+        shell: cmd
+        env:
+          SALAH_CONFIG_PATH: ${{ runner.temp }}\salah-app\config.json
+        run: |
+          set APPDIR=app\build\compose\binaries\main\app\Salah
+          dir /b %APPDIR% %APPDIR%\runtime\bin
+          rem Through the real Salah.exe launcher, exactly as the Start menu runs it.
+          start "" /wait "%APPDIR%\Salah.exe" --selftest
+          set RC=%ERRORLEVEL%
+          if exist "%APPDATA%\Salah\crash.log" type "%APPDATA%\Salah\crash.log"
+          echo Salah.exe exit code %RC%
+          if not "%RC%"=="0" (
+            rem Same app on the bundled runtime directly, so the JVM's own error is printed.
+            "%APPDIR%\runtime\bin\java.exe" -cp "%APPDIR%\app\*" salah.app.MainKt --selftest
+            exit /b 1
+          )
       - uses: actions/upload-artifact@v4
         with:
           name: Salah-Windows

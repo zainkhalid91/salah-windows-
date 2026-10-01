@@ -55,6 +55,31 @@ import javax.swing.SwingUtilities
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
+    // Any startup failure is written to crash.log and shown, instead of Windows' bare
+    // "Failed to launch JVM". --selftest (used by CI) starts the real app and exits after 10 s.
+    val selfTest = "--selftest" in args
+    Thread.setDefaultUncaughtExceptionHandler { t, e ->
+        CrashLog.write(e, "uncaught on ${t.name}")
+        if (selfTest) Runtime.getRuntime().halt(1)
+    }
+    if (selfTest) {
+        Thread {
+            Thread.sleep(10_000)
+            println("selftest: app ran for 10 s without errors")
+            AppInstance.release()
+            Runtime.getRuntime().halt(0)
+        }.apply { isDaemon = true }.start()
+    }
+    try {
+        run(args)
+    } catch (e: Throwable) {
+        CrashLog.write(e, "startup")
+        if (!selfTest) CrashLog.showDialog(e)
+        exitProcess(1)
+    }
+}
+
+private fun run(args: Array<String>) {
     val snapshot = args.indexOf("--snapshot")
     if (snapshot >= 0) {
         Snapshot.renderAll(File(args.getOrNull(snapshot + 1) ?: "snapshots"))

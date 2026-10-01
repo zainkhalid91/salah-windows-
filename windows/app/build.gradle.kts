@@ -14,6 +14,9 @@ dependencies {
     implementation(project(":cli"))
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
+    // Dispatchers.Main on the Swing event thread. Compose doesn't bring it in on its own; without it
+    // the app crashes at startup ("Module with the Main dispatcher is missing").
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.8.0")
     // Dark title bar (DWM) and reading Windows' app mode without spawning processes.
     implementation("net.java.dev.jna:jna-platform:5.15.0")
 }

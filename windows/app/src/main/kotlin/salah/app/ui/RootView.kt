@@ -34,6 +34,7 @@ fun RootView(model: AppModel) {
                 } else {
                     when (model.tab) {
                         AppModel.Tab.TODAY -> TodayScreen(model)
+                        AppModel.Tab.CALENDAR -> CalendarScreen(model)
                         AppModel.Tab.SCHEDULE -> ScheduleScreen(model)
                         AppModel.Tab.REMINDERS -> RemindersScreen(model)
                         AppModel.Tab.SETTINGS -> SettingsScreen(model)

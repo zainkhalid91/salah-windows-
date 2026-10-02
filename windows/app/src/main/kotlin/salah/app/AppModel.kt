@@ -21,7 +21,9 @@ import salah.app.platform.WindowsIntegration
 import salah.core.ConfigException
 import salah.core.ConfigStore
 import salah.core.DaySchedule
+import salah.core.IslamicAlertPlanner
 import salah.core.NotificationPlanner
+import salah.core.PlannedAlert
 import salah.core.PlannedNotification
 import salah.core.Prayer
 import salah.core.PrayerClock
@@ -42,7 +44,7 @@ class AppModel(
     private val live: Boolean = true,
     fixedNow: Instant? = null,
 ) {
-    enum class Tab(val title: String) { TODAY("Today"), SCHEDULE("Schedule"), REMINDERS("Reminders"), SETTINGS("Settings"), ABOUT("About") }
+    enum class Tab(val title: String) { TODAY("Today"), CALENDAR("Calendar"), SCHEDULE("Schedule"), REMINDERS("Reminders"), SETTINGS("Settings"), ABOUT("About") }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -82,6 +84,7 @@ class AppModel(
     private var plannedDay: LocalDate? = null
     private val delivered = LinkedHashSet<String>()
     private var lastPlan: List<PlannedNotification> = emptyList()
+    private var lastAlerts: List<PlannedAlert> = emptyList()
     private var jobs = mutableListOf<Job>()
 
     init {
@@ -251,12 +254,21 @@ class AppModel(
                     if (nowI.epochSecond - p.fireDate.epochSecond <= 300) notifier.show(p.title, p.body, config.reminders.sound) { showMainWindow() }
                 }
             }
+            for (a in lastAlerts) {
+                if (a.fireDate <= nowI && a.id !in delivered) {
+                    delivered += a.id
+                    if (nowI.epochSecond - a.fireDate.epochSecond <= 300) notifier.show(a.title, a.body, config.reminders.sound) { showMainWindow() }
+                }
+            }
             while (delivered.size > 200) delivered.remove(delivered.first())
             val plan = withContext(Dispatchers.Default) { NotificationPlanner.plan(nowI, config) }
+            // Islamic date alerts (new month, special days), in the Windows display language.
+            val alerts = withContext(Dispatchers.Default) { IslamicAlertPlanner.plan(nowI, config) }
             lastPlan = plan
+            lastAlerts = alerts
             scheduled = plan
             plannedDay = localDate(nowI, zone)
-            val next = plan.firstOrNull()?.fireDate
+            val next = listOfNotNull(plan.firstOrNull()?.fireDate, alerts.firstOrNull()?.fireDate).minOrNull()
             val untilNext = next?.let { it.toEpochMilli() - System.currentTimeMillis() } ?: Long.MAX_VALUE
             val wait = untilNext.coerceIn(0, 60_000)
             withTimeoutOrNull(wait) {

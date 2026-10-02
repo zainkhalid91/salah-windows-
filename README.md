@@ -16,8 +16,8 @@ timeline, digital display, pixel digits, calculations and settings, rebuilt for 
 
 | Installer | Link |
 |---|---|
-| **Windows installer (.exe)**, recommended | [**Download Salah-1.2.0.exe**](https://github.com/zainkhalid91/salah-windows-/releases/latest/download/Salah-1.2.0.exe) |
-| Windows Installer package (.msi), for IT and managed PCs | [Download Salah-1.2.0.msi](https://github.com/zainkhalid91/salah-windows-/releases/latest/download/Salah-1.2.0.msi) |
+| **Windows installer (.exe)**, recommended | [**Download Salah-1.3.0.exe**](https://github.com/zainkhalid91/salah-windows-/releases/latest/download/Salah-1.3.0.exe) |
+| Windows Installer package (.msi), for IT and managed PCs | [Download Salah-1.3.0.msi](https://github.com/zainkhalid91/salah-windows-/releases/latest/download/Salah-1.3.0.msi) |
 | All versions and release notes | [Releases](https://github.com/zainkhalid91/salah-windows-/releases) |
 
 Requires Windows 10 or 11 (64-bit). Java is bundled, so there's nothing else to install.
@@ -50,7 +50,7 @@ Requires Windows 10 or 11 (64-bit). Java is bundled, so there's nothing else to 
 
 ## Install
 
-1. **Download** [`Salah-1.2.0.exe`](https://github.com/zainkhalid91/salah-windows-/releases/latest/download/Salah-1.2.0.exe).
+1. **Download** [`Salah-1.3.0.exe`](https://github.com/zainkhalid91/salah-windows-/releases/latest/download/Salah-1.3.0.exe).
 2. **Run it.** Windows may show *"Windows protected your PC"* because the installer isn't
    code-signed yet. Click **More info → Run anyway**.
 3. **Follow the installer.** Salah installs for your user account only, so it doesn't ask for
@@ -88,6 +88,14 @@ keep arriving after you close the window.
   NOW with the time since it started.
 - **Gregorian and Hijri dates**: Umm al-Qura calendar, with a ±2 day adjustment for local moon
   sighting.
+- **Islamic calendar**: a Hijri or Gregorian month view with both dates in every day, a converter
+  that works both ways, and every Islamic date of the year (Islamic New Year, Ashura, Mawlid,
+  Isra and Mi'raj, Shab-e-Barat, Ramadan, Laylat al-Qadr, both Eids, Arafah and more). It follows
+  your Windows display language: English, Arabic, Urdu, Indonesian, Malay, Turkish or French, with
+  local digits and right-to-left layout for Arabic and Urdu.
+- **Islamic date alerts**: a notification for each new Islamic month and for special days, at
+  Maghrib the evening before (when the Islamic day begins) or on the morning of the day. The white
+  days (13th to 15th) are optional.
 - **Jumu'ah on Fridays**: Dhuhr is relabelled on Fridays (you can turn this off).
 - **Prayer details**: click any prayer for its reminder, method and offset.
 - **Preview any date**: click the date to pick a day from a calendar.
@@ -116,6 +124,8 @@ keep arriving after you close the window.
 | ![](windows/docs/screenshots/today-detail-light.png) | ![](windows/docs/screenshots/today-preview-light.png) |
 | **Schedule (week, CSV/ICS export)** | **Reminders** |
 | ![](windows/docs/screenshots/schedule-light.png) | ![](windows/docs/screenshots/reminders-light.png) |
+| **Islamic calendar** | **The calendar in Arabic** |
+| ![](windows/docs/screenshots/calendar-light.png) | ![](windows/docs/screenshots/calendar-ar-light.png) |
 | **Settings** | **About** |
 | ![](windows/docs/screenshots/settings-light.png) | ![](windows/docs/screenshots/about-light.png) |
 

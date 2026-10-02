@@ -39,6 +39,7 @@ object Snapshot {
             shot(outDir, "today-detail-$sfx", config, next, dark, 940, 560, scale) { it.detailPrayer = Prayer.ASR }
             shot(outDir, "today-preview-$sfx", config, next, dark, 940, 560, scale) { it.previewDate = LocalDate.of(2026, 10, 9) }
             shot(outDir, "welcome-$sfx", SalahConfig(), next, dark, 940, 560, scale)
+            shot(outDir, "calendar-$sfx", config, next, dark, 1100, 1500, scale) { it.tab = AppModel.Tab.CALENDAR }
             shot(outDir, "schedule-$sfx", config, next, dark, 940, 640, scale) { it.tab = AppModel.Tab.SCHEDULE }
             shot(outDir, "reminders-$sfx", config, next, dark, 940, 760, scale) { it.tab = AppModel.Tab.REMINDERS }
             shot(outDir, "settings-$sfx", config, next, dark, 940, 900, scale) { it.tab = AppModel.Tab.SETTINGS }
@@ -50,6 +51,13 @@ object Snapshot {
         val tromso = config.copy(location = SavedLocation("Tromsø", 69.6492, 18.9553, "Europe/Oslo", "NO"), calculation = CalculationSettings())
         shot(outDir, "today-polar-light", tromso, OffsetDateTime.parse("2026-06-21T12:00:00+02:00").toInstant(), false, 940, 560, scale)
         shot(outDir, "tray-panel-light", config, next, false, 300, TRAY_PANEL_HEIGHT, scale, tray = true)
+        // The calendar follows the display language.
+        val saved = java.util.Locale.getDefault()
+        for (tag in listOf("ar", "ur")) {
+            java.util.Locale.setDefault(java.util.Locale.forLanguageTag(tag))
+            shot(outDir, "calendar-$tag-light", config, next, false, 1100, 1500, scale) { it.tab = AppModel.Tab.CALENDAR }
+        }
+        java.util.Locale.setDefault(saved)
         shot(outDir, "tray-panel-dark", config, next, true, 300, TRAY_PANEL_HEIGHT, scale, tray = true)
         shot(outDir, "toast-light", config, next, false, 380, TOAST_HEIGHT, scale, toast = true)
         shot(outDir, "toast-dark", config, next, true, 380, TOAST_HEIGHT, scale, toast = true)

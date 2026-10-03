@@ -10,19 +10,20 @@ import androidx.compose.runtime.setValue
 import com.sun.jna.Native
 import com.sun.jna.Pointer
 import com.sun.jna.platform.win32.Advapi32Util
+import com.sun.jna.platform.win32.User32
 import com.sun.jna.platform.win32.WinDef
 import com.sun.jna.platform.win32.WinReg
+import com.sun.jna.platform.win32.WinUser
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.win32.StdCallLibrary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import salah.core.Platform
-import java.awt.Window
 
 /**
  * Dark mode plumbing Windows doesn't give a JVM app for free: reading the "Choose your app mode"
- * setting live, and asking DWM to draw the title bar dark so it matches the app.
+ * setting live, and DWM window attributes.
  */
 object WindowsTheme {
     private const val PERSONALIZE = "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"
@@ -51,21 +52,48 @@ object WindowsTheme {
         }
     }
 
-    /**
-     * Paints the native title bar dark or light (DWMWA_USE_IMMERSIVE_DARK_MODE, Windows 10 20H1+ is
-     * attribute 20; earlier builds used 19). Harmless where unsupported.
-     */
-    fun applyTitleBar(window: Window, dark: Boolean) {
+    internal fun dwmAttribute(hwnd: WinDef.HWND, attribute: Int, value: Int): Boolean =
+        Dwm.INSTANCE?.DwmSetWindowAttribute(hwnd, attribute, IntByReference(value), 4) == 0
+}
+
+/**
+ * Window styling for the undecorated main window: the minimize and maximize styles so the taskbar
+ * button and Win+arrow keys still work, rounded corners on Windows 11, and maximized bounds that
+ * stop at the taskbar instead of covering it. Harmless where unsupported.
+ */
+object WindowFrame {
+    private const val WS_SYSMENU = 0x00080000
+    private const val WS_MINIMIZEBOX = 0x00020000
+    private const val WS_MAXIMIZEBOX = 0x00010000
+    private const val DWMWA_WINDOW_CORNER_PREFERENCE = 33
+    private const val DWMWCP_ROUND = 2
+
+    fun style(window: java.awt.Frame) {
+        keepMaximizedOffTaskbar(window)
+        window.addComponentListener(object : java.awt.event.ComponentAdapter() {
+            override fun componentMoved(e: java.awt.event.ComponentEvent) = keepMaximizedOffTaskbar(window)
+        })
         if (!Platform.isWindows) return
-        val dwm = Dwm.INSTANCE ?: return
         runCatching {
             val hwnd = WinDef.HWND(Pointer(Native.getComponentID(window)))
-            val value = IntByReference(if (dark) 1 else 0)
-            if (dwm.DwmSetWindowAttribute(hwnd, 20, value, 4) != 0) dwm.DwmSetWindowAttribute(hwnd, 19, value, 4)
-            // Nudge Windows to repaint the non-client area right away.
-            window.size = window.size.let { java.awt.Dimension(it.width + 1, it.height) }
-            window.size = window.size.let { java.awt.Dimension(it.width - 1, it.height) }
+            val u = User32.INSTANCE
+            val style = u.GetWindowLong(hwnd, WinUser.GWL_STYLE)
+            u.SetWindowLong(hwnd, WinUser.GWL_STYLE, style or WS_SYSMENU or WS_MINIMIZEBOX or WS_MAXIMIZEBOX)
+            WindowsTheme.dwmAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND)
         }
+    }
+
+    /** The work area of the screen the window is on, so maximize stops at the taskbar. */
+    private fun keepMaximizedOffTaskbar(window: java.awt.Frame) {
+        val gc = window.graphicsConfiguration ?: return
+        val screen = gc.bounds
+        val insets = java.awt.Toolkit.getDefaultToolkit().getScreenInsets(gc)
+        // Relative to the screen's own origin, as Windows expects for WM_GETMINMAXINFO.
+        window.maximizedBounds = java.awt.Rectangle(
+            insets.left, insets.top,
+            screen.width - insets.left - insets.right,
+            screen.height - insets.top - insets.bottom,
+        )
     }
 }
 

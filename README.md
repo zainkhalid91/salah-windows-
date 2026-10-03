@@ -16,8 +16,8 @@ timeline, digital display, pixel digits, calculations and settings, rebuilt for 
 
 | Installer | Link |
 |---|---|
-| **Windows installer (.exe)**, recommended | [**Download Salah-1.4.0.exe**](https://github.com/zainkhalid91/salah-windows-/releases/latest/download/Salah-1.4.0.exe) |
-| Windows Installer package (.msi), for IT and managed PCs | [Download Salah-1.4.0.msi](https://github.com/zainkhalid91/salah-windows-/releases/latest/download/Salah-1.4.0.msi) |
+| **Windows installer (.exe)**, recommended | [**Download Salah-1.4.1.exe**](https://github.com/zainkhalid91/salah-windows-/releases/latest/download/Salah-1.4.1.exe) |
+| Windows Installer package (.msi), for IT and managed PCs | [Download Salah-1.4.1.msi](https://github.com/zainkhalid91/salah-windows-/releases/latest/download/Salah-1.4.1.msi) |
 | All versions and release notes | [Releases](https://github.com/zainkhalid91/salah-windows-/releases) |
 
 Requires Windows 10 or 11 (64-bit). Java is bundled, so there's nothing else to install.
@@ -50,7 +50,7 @@ Requires Windows 10 or 11 (64-bit). Java is bundled, so there's nothing else to 
 
 ## Install
 
-1. **Download** [`Salah-1.4.0.exe`](https://github.com/zainkhalid91/salah-windows-/releases/latest/download/Salah-1.4.0.exe).
+1. **Download** [`Salah-1.4.1.exe`](https://github.com/zainkhalid91/salah-windows-/releases/latest/download/Salah-1.4.1.exe).
 2. **Run it.** Windows may show *"Windows protected your PC"* because the installer isn't
    code-signed yet. Click **More info → Run anyway**.
 3. **Follow the installer.** Salah installs for your user account only, so it doesn't ask for

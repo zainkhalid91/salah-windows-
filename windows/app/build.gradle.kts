@@ -21,7 +21,7 @@ dependencies {
     implementation("net.java.dev.jna:jna-platform:5.15.0")
 }
 
-val appVersion = "1.4.0"
+val appVersion = "1.4.1"
 
 compose.desktop {
     application {

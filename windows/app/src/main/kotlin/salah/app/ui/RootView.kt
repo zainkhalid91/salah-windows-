@@ -3,8 +3,10 @@ package salah.app.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -50,18 +52,29 @@ fun RootView(model: AppModel) {
     }
 }
 
+/** The top bar, which is also the window's title bar: drag it to move the window. */
 @Composable
 private fun TabBar(model: AppModel) {
     val c = palette
-    Box(Modifier.fillMaxWidth().height(48.dp).background(c.chrome).padding(horizontal = 14.dp)) {
-        Row(Modifier.align(Alignment.CenterStart), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Label("☾", size = 15f, weight = FontWeight.SemiBold, color = c.accent)
-            Label("Salah", size = 13f, weight = FontWeight.SemiBold)
+    val chrome = LocalWindowChrome.current
+    TitleBarArea(Modifier.fillMaxWidth().height(48.dp).background(c.chrome)) {
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            // Narrow windows drop the app name and the status first, so the tabs stay on one line.
+            val roomy = maxWidth >= 900.dp
+            val showName = maxWidth >= 800.dp
+            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.padding(start = 14.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Label("☾", size = 15f, weight = FontWeight.SemiBold, color = c.accent)
+                    if (showName) Label("Salah", size = 13f, weight = FontWeight.SemiBold)
+                }
+                // The tabs sit in the middle of whatever space is left, so they never run into the edges.
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    PillPicker(AppModel.Tab.entries.map { it to tr(it.title) }, model.tab, { model.tab = it; if (it != AppModel.Tab.TODAY) model.clearDetail() })
+                }
+                if (roomy) Label(tr(model.reminderStatus), size = 12f, color = c.secondary, maxLines = 1, modifier = Modifier.padding(horizontal = 12.dp))
+                if (chrome != null) CaptionButtons(chrome, Modifier.padding(start = if (roomy) 0.dp else 12.dp))
+            }
         }
-        Box(Modifier.align(Alignment.Center)) {
-            PillPicker(AppModel.Tab.entries.map { it to tr(it.title) }, model.tab, { model.tab = it; if (it != AppModel.Tab.TODAY) model.clearDetail() })
-        }
-        Label(tr(model.reminderStatus), size = 12f, color = c.secondary, modifier = Modifier.align(Alignment.CenterEnd))
     }
 }
 

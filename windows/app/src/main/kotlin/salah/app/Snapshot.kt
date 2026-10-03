@@ -1,11 +1,14 @@
 package salah.app
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.use
+import salah.app.ui.LocalWindowChrome
 import salah.app.ui.Localized
 import salah.app.ui.RootView
 import salah.app.ui.SalahTheme
+import salah.app.ui.WindowChrome
 import salah.core.AppLanguage
 import salah.core.CalculationSettings
 import salah.core.ConfigStore
@@ -42,7 +45,7 @@ object Snapshot {
             val sfx = if (dark) "dark" else "light"
             shot(outDir, "today-next-$sfx", config, next, dark, 940, 560, scale)
             shot(outDir, "today-now-$sfx", config, now, dark, 940, 560, scale)
-            shot(outDir, "today-narrow-$sfx", config, next, dark, 640, 920, scale)
+            shot(outDir, "today-narrow-$sfx", config, next, dark, 720, 920, scale)
             shot(outDir, "today-detail-$sfx", config, next, dark, 940, 560, scale) { it.detailPrayer = Prayer.ASR }
             shot(outDir, "today-preview-$sfx", config, next, dark, 940, 560, scale) { it.previewDate = LocalDate.of(2026, 10, 9) }
             shot(outDir, "welcome-$sfx", SalahConfig(display = config.display), next, dark, 940, 560, scale)
@@ -74,6 +77,12 @@ object Snapshot {
         shot(outDir, "toast-dark", config, next, true, 380, TOAST_HEIGHT, scale, toast = true)
     }
 
+    /** Caption buttons that do nothing, so the title bar renders as it does in the app. */
+    private val snapshotChrome = WindowChrome(
+        isMaximized = false, minimize = {}, toggleMaximize = {}, close = {},
+        dragArea = { modifier, content -> androidx.compose.foundation.layout.Box(modifier) { content() } },
+    )
+
     private fun shot(
         dir: File, name: String, config: SalahConfig, now: Instant, dark: Boolean, w: Int, h: Int, scale: Float,
         tray: Boolean = false, toast: Boolean = false, setup: (AppModel) -> Unit = {},
@@ -88,7 +97,7 @@ object Snapshot {
                     when {
                         tray -> salah.app.ui.TrayPanel(model)
                         toast -> salah.app.ui.ToastCard("Asr in 10 minutes", "16:03 · Singapore", onOpen = {}, onClose = {})
-                        else -> RootView(model)
+                        else -> CompositionLocalProvider(LocalWindowChrome provides snapshotChrome) { RootView(model) }
                     }
                 }
             }

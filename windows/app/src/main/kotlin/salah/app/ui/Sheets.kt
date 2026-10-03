@@ -157,37 +157,37 @@ fun LocationSheet(model: AppModel) {
     }
 
     Sheet(onDismiss = close) {
-        Label("Location", size = 17f, weight = FontWeight.SemiBold)
-        PillPicker(listOf(false to "Search city", true to "Coordinates"), coordinates, { coordinates = it; error = null }, compact = false)
+        Label(tr("Location"), size = 17f, weight = FontWeight.SemiBold)
+        PillPicker(listOf(false to tr("Search city"), true to tr("Coordinates")), coordinates, { coordinates = it; error = null }, compact = false)
         if (!coordinates) {
             LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                TextInput(query, { query = it }, "City, e.g. Singapore or Jakarta", Modifier.weight(1f), ::search, focus)
-                SecondaryButton("Search", enabled = query.isNotBlank() && !searching) { search() }
+                TextInput(query, { query = it }, tr("City, e.g. Singapore or Jakarta"), Modifier.weight(1f), ::search, focus)
+                SecondaryButton(tr("Search"), enabled = query.isNotBlank() && !searching) { search() }
             }
             if (searching) CircularProgressIndicator(Modifier.size(16.dp), color = c.accent, strokeWidth = 2.dp)
             Column(Modifier.heightIn(max = 260.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 for (r in results) ResultRow(r) { model.setLocation(r) }
             }
         } else {
-            CoordRow("Name") { TextInput(name, { name = it }, "e.g. Home", Modifier.fillMaxWidth()) }
-            CoordRow("Latitude") { TextInput(lat, { lat = it }, "-90 to 90, e.g. 1.3521", Modifier.fillMaxWidth()) }
-            CoordRow("Longitude") { TextInput(lon, { lon = it }, "-180 to 180, e.g. 103.8198", Modifier.fillMaxWidth()) }
-            CoordRow("Time zone") { SecondaryButton("$tz  ⌄") { tzPicker = true } }
+            CoordRow(tr("Name")) { TextInput(name, { name = it }, tr("e.g. Home"), Modifier.fillMaxWidth()) }
+            CoordRow(tr("Latitude")) { TextInput(lat, { lat = it }, "-90 to 90, e.g. 1.3521", Modifier.fillMaxWidth()) }
+            CoordRow(tr("Longitude")) { TextInput(lon, { lon = it }, "-180 to 180, e.g. 103.8198", Modifier.fillMaxWidth()) }
+            CoordRow(tr("Time zone")) { SecondaryButton("$tz  ⌄") { tzPicker = true } }
         }
-        error?.let { Label(it, size = 12f, color = c.accent) }
+        error?.let { Label(tr(it), size = 12f, color = c.accent) }
         HorizontalDivider(color = c.line)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SecondaryButton(if (model.locationProvider.isLocating) "Locating…" else "⌖  Use my location", enabled = !model.locationProvider.isLocating) {
+            SecondaryButton(if (model.locationProvider.isLocating) tr("Locating…") else tr("⌖  Use my location"), enabled = !model.locationProvider.isLocating) {
                 model.locationProvider.requestLocation()
                 close()
             }
             Spacer(Modifier.weight(1f))
-            SecondaryButton("Cancel", onClick = close)
-            if (coordinates) AccentButton("Save") { saveCoordinates() }
+            SecondaryButton(tr("Cancel"), onClick = close)
+            if (coordinates) AccentButton(tr("Save")) { saveCoordinates() }
         }
         Label(
-            "City search uses Open-Meteo's geocoding service, so your query is sent to Open-Meteo. Coordinates you type are never sent anywhere.",
+            tr("City search uses Open-Meteo's geocoding service, so your query is sent to Open-Meteo. Coordinates you type are never sent anywhere."),
             size = 11f, color = c.secondary,
         )
     }
@@ -229,8 +229,8 @@ fun TimeZonePicker(current: String, onDismiss: () -> Unit, onPick: (String) -> U
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     Sheet(onDismiss = onDismiss, width = 380.dp) {
-        Label("Time zone", size = 15f, weight = FontWeight.SemiBold)
-        TextInput(filter, { filter = it }, "Search, e.g. Jakarta", Modifier.fillMaxWidth(), { shown.firstOrNull()?.let(onPick) }, focus)
+        Label(tr("Time zone"), size = 15f, weight = FontWeight.SemiBold)
+        TextInput(filter, { filter = it }, tr("Search, e.g. Jakarta"), Modifier.fillMaxWidth(), { shown.firstOrNull()?.let(onPick) }, focus)
         LazyColumn(Modifier.heightIn(max = 320.dp)) {
             items(shown, key = { it }) { id ->
                 val selected = id == current

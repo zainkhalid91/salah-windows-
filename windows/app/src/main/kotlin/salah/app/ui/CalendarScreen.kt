@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -35,9 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import salah.app.AppModel
 import salah.core.CalKey
@@ -58,16 +55,12 @@ import java.util.Locale
 
 /**
  * Hijri and Gregorian month views, a converter, this year's Islamic dates and
- * the alert settings. Text follows the Windows display language, right to left
- * for Arabic and Urdu.
+ * the alert settings, in the app's language.
  */
 @Composable
 fun CalendarScreen(model: AppModel) {
-    val locale = Locale.getDefault()
-    val lang = CalendarText.lang(locale)
-    CompositionLocalProvider(LocalLayoutDirection provides if (lang.rtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
-        CalendarBody(model, locale, lang)
-    }
+    val locale = appLocale()
+    CalendarBody(model, locale, CalendarText.lang(locale))
 }
 
 @Composable
@@ -251,7 +244,7 @@ private fun SelectedDay(date: LocalDate, adj: Int, today: LocalDate, lang: CalLa
             val rel = ChronoUnit.DAYS.between(today, date)
             if (rel != 0L) Label(CalendarText.relative(rel, lang), size = 12f, color = c.onTimelineDim)
         }
-        Label(CalendarText.hijri(day.hijri, lang), size = 20f, weight = FontWeight.SemiBold, color = c.onTimeline, modifier = Modifier.padding(top = 6.dp))
+        Label(CalendarText.hijri(day.hijri, lang, monthNumber = true), size = 20f, weight = FontWeight.SemiBold, color = c.onTimeline, modifier = Modifier.padding(top = 6.dp))
         Label(CalendarText.gregorian(date, locale), size = 13.5f, color = c.onTimelineDim)
         Spacer(Modifier.height(10.dp))
         val names = day.events.map { CalendarText.event(it, lang) } + if (day.whiteDay) listOf(CalendarText.text(CalKey.WHITE_DAYS, lang)) else emptyList()

@@ -77,12 +77,12 @@ class TimeEdgeTest {
     fun jumuahOnlyOnFridayAndWhenEnabled() {
         val f = PrayerSchedule.forDate(LocalDate.of(2026, 9, 25), Fixtures.singapore, CalculationSettings())
         val s = PrayerSchedule.forDate(LocalDate.of(2026, 9, 26), Fixtures.singapore, CalculationSettings())
-        assertEquals("Jumu'ah", f.label(Prayer.DHUHR, true))
+        assertEquals("Jumuah", f.label(Prayer.DHUHR, true))
         assertEquals("Dhuhr", f.label(Prayer.DHUHR, false))
         assertEquals("Dhuhr", s.label(Prayer.DHUHR, true))
         assertEquals("Asr", f.label(Prayer.ASR, true))
         val next = NextPrayerResolver.resolve(Fixtures.date("2026-09-25T10:00:00+08:00"), Fixtures.singapore, CalculationSettings())!!
-        assertEquals("Jumu'ah", next.label(true))
+        assertEquals("Jumuah", next.label(true))
         assertEquals("Dhuhr", next.label(false))
     }
 

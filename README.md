@@ -16,8 +16,8 @@ timeline, digital display, pixel digits, calculations and settings, rebuilt for 
 
 | Installer | Link |
 |---|---|
-| **Windows installer (.exe)**, recommended | [**Download Salah-1.3.0.exe**](https://github.com/zainkhalid91/salah-windows-/releases/latest/download/Salah-1.3.0.exe) |
-| Windows Installer package (.msi), for IT and managed PCs | [Download Salah-1.3.0.msi](https://github.com/zainkhalid91/salah-windows-/releases/latest/download/Salah-1.3.0.msi) |
+| **Windows installer (.exe)**, recommended | [**Download Salah-1.4.0.exe**](https://github.com/zainkhalid91/salah-windows-/releases/latest/download/Salah-1.4.0.exe) |
+| Windows Installer package (.msi), for IT and managed PCs | [Download Salah-1.4.0.msi](https://github.com/zainkhalid91/salah-windows-/releases/latest/download/Salah-1.4.0.msi) |
 | All versions and release notes | [Releases](https://github.com/zainkhalid91/salah-windows-/releases) |
 
 Requires Windows 10 or 11 (64-bit). Java is bundled, so there's nothing else to install.
@@ -50,7 +50,7 @@ Requires Windows 10 or 11 (64-bit). Java is bundled, so there's nothing else to 
 
 ## Install
 
-1. **Download** [`Salah-1.3.0.exe`](https://github.com/zainkhalid91/salah-windows-/releases/latest/download/Salah-1.3.0.exe).
+1. **Download** [`Salah-1.4.0.exe`](https://github.com/zainkhalid91/salah-windows-/releases/latest/download/Salah-1.4.0.exe).
 2. **Run it.** Windows may show *"Windows protected your PC"* because the installer isn't
    code-signed yet. Click **More info → Run anyway**.
 3. **Follow the installer.** Salah installs for your user account only, so it doesn't ask for
@@ -62,6 +62,11 @@ download the new installer and run it. You can also install a newer `.exe` over 
 settings are kept.
 
 ## First launch
+
+The first time it opens, Salah asks which language you want: **English** or **العربية** (Arabic).
+You can change it any time in **Settings → Language**.
+
+![Choose your language](windows/docs/screenshots/language-light.png)
 
 ![Welcome screen](windows/docs/screenshots/welcome-light.png)
 
@@ -84,19 +89,23 @@ keep arriving after you close the window.
 
 - **Today at a glance**: the next prayer in big pixel digits with a live countdown, and the day's
   timeline from Fajr to Isha. Sunrise is shown as the end of Fajr.
+- **Sunnah times**: Tahajjud (the last third of the night), Ishraq, Duha (Chasht), Zawal,
+  Awwabin and Islamic midnight on the same timeline, each with when its window ends. Click one to
+  see what it is. They can be hidden in Settings.
+- **English or Arabic**: the whole app, including the tray, reminders and calendar, in English or
+  Arabic, right to left in Arabic.
 - **NOW window**: for 15 minutes after a prayer begins (adjustable, 0–60), the display shows it as
   NOW with the time since it started.
 - **Gregorian and Hijri dates**: Umm al-Qura calendar, with a ±2 day adjustment for local moon
   sighting.
 - **Islamic calendar**: a Hijri or Gregorian month view with both dates in every day, a converter
   that works both ways, and every Islamic date of the year (Islamic New Year, Ashura, Mawlid,
-  Isra and Mi'raj, Shab-e-Barat, Ramadan, Laylat al-Qadr, both Eids, Arafah and more). It follows
-  your Windows display language: English, Arabic, Urdu, Indonesian, Malay, Turkish or French, with
-  local digits and right-to-left layout for Arabic and Urdu.
+  Isra and Mi'raj, Shab-e-Barat, Ramadan, Laylat al-Qadr, both Eids, Arafah and more). The
+  selected day shows the Hijri month's number too, e.g. *22 Rabi' al-Thani (4) 1448 AH*.
 - **Islamic date alerts**: a notification for each new Islamic month and for special days, at
   Maghrib the evening before (when the Islamic day begins) or on the morning of the day. The white
   days (13th to 15th) are optional.
-- **Jumu'ah on Fridays**: Dhuhr is relabelled on Fridays (you can turn this off).
+- **Jumuah on Fridays**: Dhuhr is relabelled on Fridays (you can turn this off).
 - **Prayer details**: click any prayer for its reminder, method and offset.
 - **Preview any date**: click the date to pick a day from a calendar.
 - **Schedule**: day, week or month tables, with copy to clipboard and export to **CSV** or a
@@ -124,6 +133,8 @@ keep arriving after you close the window.
 | ![](windows/docs/screenshots/today-detail-light.png) | ![](windows/docs/screenshots/today-preview-light.png) |
 | **Schedule (week, CSV/ICS export)** | **Reminders** |
 | ![](windows/docs/screenshots/schedule-light.png) | ![](windows/docs/screenshots/reminders-light.png) |
+| **Sunnah times (Tahajjud selected)** | **Salah in Arabic** |
+| ![](windows/docs/screenshots/today-sunnah-light.png) | ![](windows/docs/screenshots/today-ar-light.png) |
 | **Islamic calendar** | **The calendar in Arabic** |
 | ![](windows/docs/screenshots/calendar-light.png) | ![](windows/docs/screenshots/calendar-ar-light.png) |
 | **Settings** | **About** |
@@ -165,6 +176,8 @@ If you turn the notification-area icon off, closing the window quits Salah.
 Reminders appear in the bottom-right corner with the sound you chose, e.g. *"Asr in 10 minutes ·
 4:05 PM · Singapore"*. Click a reminder to open Salah.
 
+- The **azan** plays when each of the five prayers begins. Early reminders and Islamic date alerts
+  keep the sound you chose. Turn it off in **Reminders → Azan at prayer time**.
 - Salah plans the next **3 days** of reminders and tops them up continuously.
 - Reminders arrive **while Salah is running**, normally from the notification area. Keep **Start
   with Windows** on (Settings) so they're never missed.
@@ -253,7 +266,7 @@ becomes unreadable, Salah shows a **Reset to defaults** screen instead of crashi
 | High-latitude rule | Automatic, middle of the night, seventh of the night, twilight angle |
 | Offsets | −60 to +60 minutes per prayer |
 | Hijri adjustment | −2 to +2 days |
-| Jumu'ah, NOW window, clock | Relabel Fridays; 0–60 min NOW display; 12- or 24-hour |
+| Jumuah, NOW window, clock | Relabel Fridays; 0–60 min NOW display; 12- or 24-hour |
 | Appearance | System, Light, Dark |
 | Start with Windows, notification area | On/off, plus the tooltip style |
 
@@ -425,6 +438,8 @@ GitHub Release. The in-app updater picks it up from there. Bump `appVersion` in
   Batoul Apps, MIT License. The notice is kept in `windows/core/src/main/kotlin/salah/core/adhan/Adhan.kt`.
 - **Pixel font:** [Doto](https://github.com/oliverlalan/Doto) by The Doto Project Authors, SIL Open
   Font License 1.1 (`windows/app/src/main/resources/fonts/OFL.txt`)
+- **Azan clip:** from islamcan.com, as supplied by the project owner
+  (`windows/app/src/main/resources/sounds/salah-azan.wav`)
 - **UI toolkit:** [Compose Multiplatform](https://www.jetbrains.com/compose-multiplatform/) by
   JetBrains · [JNA](https://github.com/java-native-access/jna)
 - **Location services:** [Open-Meteo](https://open-meteo.com/) geocoding,

@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -69,7 +68,8 @@ fun Label(
 ) {
     Text(
         text, modifier = modifier, color = color, maxLines = maxLines, overflow = TextOverflow.Ellipsis,
-        style = TextStyle(fontFamily = UiFont, fontSize = size.sp, fontWeight = weight, letterSpacing = tracking.sp, lineHeight = (size * 1.35f).sp),
+        // Arabic letters join, so no extra tracking there.
+        style = TextStyle(fontFamily = UiFont, fontSize = size.sp, fontWeight = weight, letterSpacing = (if (LocalLang.current.rtl) 0f else tracking).sp, lineHeight = (size * 1.35f).sp),
     )
 }
 
@@ -414,24 +414,5 @@ fun Pane(title: String, subtitle: String? = null, scroll: Boolean = true, conten
         }
     }
 }
-
-@Composable
-fun Banner(text: String, action: @Composable () -> Unit = {}) {
-    val c = palette
-    Row(
-        Modifier.fillMaxWidth().padding(bottom = 18.dp).clip(RoundedCornerShape(10.dp))
-            .background(c.accent.copy(alpha = 0.08f)).border(1.dp, c.accent.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Label("🔕", size = 13f, color = c.accent)
-        Label(text, modifier = Modifier.weight(1f))
-        action()
-    }
-}
-
-@Composable
-fun Gap(h: Dp) = Spacer(Modifier.height(h))
 
 // endregion

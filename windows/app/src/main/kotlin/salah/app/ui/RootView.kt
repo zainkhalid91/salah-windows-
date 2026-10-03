@@ -44,6 +44,9 @@ fun RootView(model: AppModel) {
             }
         }
         if (model.showLocationSheet) LocationSheet(model)
+        if (model.config.display.language == null && model.configError == null) {
+            LanguagePicker { picked -> model.update { it.copy(display = it.display.copy(language = picked)) } }
+        }
     }
 }
 
@@ -56,9 +59,9 @@ private fun TabBar(model: AppModel) {
             Label("Salah", size = 13f, weight = FontWeight.SemiBold)
         }
         Box(Modifier.align(Alignment.Center)) {
-            PillPicker(AppModel.Tab.entries.map { it to it.title }, model.tab, { model.tab = it; if (it != AppModel.Tab.TODAY) model.detailPrayer = null })
+            PillPicker(AppModel.Tab.entries.map { it to tr(it.title) }, model.tab, { model.tab = it; if (it != AppModel.Tab.TODAY) model.clearDetail() })
         }
-        Label(model.reminderStatus, size = 12f, color = c.secondary, modifier = Modifier.align(Alignment.CenterEnd))
+        Label(tr(model.reminderStatus), size = 12f, color = c.secondary, modifier = Modifier.align(Alignment.CenterEnd))
     }
 }
 
@@ -68,14 +71,14 @@ private fun InvalidConfigView(model: AppModel, message: String) {
     val c = palette
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(Modifier.widthIn(max = 560.dp).padding(40.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Eyebrow("SETTINGS ERROR", color = c.accent)
-            Label("Salah couldn't read its settings.", size = 20f, weight = FontWeight.SemiBold)
+            Eyebrow(tr(tr("SETTINGS ERROR")), color = c.accent)
+            Label(tr(tr("Salah couldn't read its settings.")), size = 20f, weight = FontWeight.SemiBold)
             Label(message, color = c.secondary)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                AccentButton("Reset to defaults") { model.resetToDefaults() }
-                SecondaryButton("Show in Explorer") { WindowsIntegration.showInExplorer(model.store.path) }
+                AccentButton(tr(tr("Reset to defaults"))) { model.resetToDefaults() }
+                SecondaryButton(tr(tr("Show in Explorer"))) { WindowsIntegration.showInExplorer(model.store.path) }
             }
-            Label("Resetting replaces the file with defaults. You'll need to set your location again.", size = 12f, color = c.secondary)
+            Label(tr(tr("Resetting replaces the file with defaults. You'll need to set your location again.")), size = 12f, color = c.secondary)
         }
     }
 }

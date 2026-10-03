@@ -27,12 +27,14 @@ import androidx.compose.ui.window.rememberWindowState
 import kotlinx.coroutines.delay
 import salah.app.platform.WindowsTheme
 import salah.app.platform.systemDarkTheme
+import salah.app.ui.Localized
 import salah.app.ui.RootView
 import salah.app.ui.SalahTheme
 import salah.app.ui.ScheduleSpan
 import salah.app.ui.ToastCard
 import salah.app.ui.TrayPanel
 import salah.core.AppInstance
+import salah.core.AppText
 import salah.core.ThemeSetting
 import java.awt.AlphaComposite
 import java.awt.Color
@@ -141,7 +143,7 @@ private fun run(args: Array<String>) {
             }
             // Match the native title bar to the app, so dark mode is dark edge to edge.
             LaunchedEffect(dark) { WindowsTheme.applyTitleBar(window, dark) }
-            SalahTheme(dark) { RootView(model) }
+            SalahTheme(dark) { Localized(model.config.display.lang) { RootView(model) } }
         }
 
         if (trayEnabled) NotificationAreaIcon(model, dark, onQuit = ::quitCompletely)
@@ -197,6 +199,8 @@ private fun ApplicationScope.NotificationAreaIcon(model: AppModel, dark: Boolean
     var panelAnchor by remember { mutableStateOf<java.awt.Point?>(null) }
     var closedAt by remember { mutableStateOf(0L) }
     val remindersItem = remember { MenuItem("Turn reminders off") }
+    val openItem = remember { MenuItem("Open Salah") }
+    val quitItem = remember { MenuItem("Quit Salah completely") }
 
     val icon = remember {
         val darkTaskbar = WindowsTheme.taskbarIsDark()
@@ -204,13 +208,13 @@ private fun ApplicationScope.NotificationAreaIcon(model: AppModel, dark: Boolean
     }
     DisposableEffect(icon) {
         val menu = PopupMenu()
-        menu.add(MenuItem("Open Salah").apply { addActionListener { SwingUtilities.invokeLater { model.showMainWindow() } } })
+        menu.add(openItem.apply { addActionListener { SwingUtilities.invokeLater { model.showMainWindow() } } })
         remindersItem.addActionListener {
             SwingUtilities.invokeLater { model.update { it.copy(reminders = it.reminders.copy(enabled = !it.reminders.enabled)) } }
         }
         menu.add(remindersItem)
         menu.addSeparator()
-        menu.add(MenuItem("Quit Salah completely").apply { addActionListener { SwingUtilities.invokeLater(onQuit) } })
+        menu.add(quitItem.apply { addActionListener { SwingUtilities.invokeLater(onQuit) } })
         icon.popupMenu = menu
         icon.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
@@ -234,9 +238,12 @@ private fun ApplicationScope.NotificationAreaIcon(model: AppModel, dark: Boolean
     // The tooltip is the Windows stand-in for the macOS menu bar label.
     val label = model.trayLabel
     val remindersOn = model.config.reminders.enabled
-    LaunchedEffect(label, remindersOn) {
+    val lang = model.config.display.lang
+    LaunchedEffect(label, remindersOn, lang) {
         icon.toolTip = label
-        remindersItem.label = if (remindersOn) "Turn reminders off" else "Turn reminders on"
+        remindersItem.label = AppText.t(lang, if (remindersOn) "Turn reminders off" else "Turn reminders on")
+        openItem.label = AppText.t(lang, "Open Salah")
+        quitItem.label = AppText.t(lang, "Quit Salah completely")
     }
 
     val anchor = panelAnchor
@@ -267,7 +274,9 @@ private fun ApplicationScope.NotificationAreaIcon(model: AppModel, dark: Boolean
                 onDispose { window.removeWindowFocusListener(l) }
             }
             SalahTheme(dark) {
-                TrayPanel(model, onOpen = { close(); model.showMainWindow() }, onQuit = onQuit)
+                Localized(model.config.display.lang) {
+                    TrayPanel(model, onOpen = { close(); model.showMainWindow() }, onQuit = onQuit)
+                }
             }
         }
     }
@@ -298,7 +307,9 @@ private fun ToastHost(model: AppModel, dark: Boolean) {
                 resizable = false, alwaysOnTop = true, focusable = false, icon = painterResource("icons/salah.png"),
             ) {
                 SalahTheme(dark) {
-                    ToastCard(t.title, t.body, onOpen = { model.notifier.dismiss(t); t.onOpen() }, onClose = { model.notifier.dismiss(t) })
+                    Localized(model.config.display.lang) {
+                        ToastCard(t.title, t.body, onOpen = { model.notifier.dismiss(t); t.onOpen() }, onClose = { model.notifier.dismiss(t) })
+                    }
                 }
             }
         }

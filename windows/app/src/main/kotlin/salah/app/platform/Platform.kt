@@ -33,7 +33,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardWatchEventKinds
 import java.time.Duration
-import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -243,10 +242,11 @@ class Notifier {
     val toasts = mutableStateListOf<Toast>()
     private var nextId = 0L
 
-    fun show(title: String, body: String, sound: ReminderSound, onOpen: () -> Unit) {
+    /** [azan] plays the azan instead of [sound], for the start of the five prayers. */
+    fun show(title: String, body: String, sound: ReminderSound, azan: Boolean = false, onOpen: () -> Unit) {
         toasts += Toast(nextId++, title, body, onOpen)
         while (toasts.size > 3) toasts.removeAt(0)
-        play(sound)
+        if (azan && sound != ReminderSound.SILENT) playResource("/sounds/salah-azan.wav") else play(sound)
     }
 
     fun dismiss(t: Toast) {
@@ -262,19 +262,21 @@ class Notifier {
                 val r = Toolkit.getDefaultToolkit().getDesktopProperty("win.sound.default") as? Runnable
                 if (r != null) r.run() else Toolkit.getDefaultToolkit().beep()
             }
-            ReminderSound.CHIME -> thread(isDaemon = true, name = "salah-chime") {
-                runCatching {
-                    val stream = Notifier::class.java.getResourceAsStream("/sounds/salah-chime.wav")!!.buffered()
-                    AudioSystem.getAudioInputStream(stream).use { audio ->
-                        val clip = AudioSystem.getClip()
-                        clip.open(audio)
-                        clip.start()
-                        Thread.sleep((clip.microsecondLength / 1000) + 200)
-                        clip.close()
-                    }
-                }.onFailure { Toolkit.getDefaultToolkit().beep() }
-            }
+            ReminderSound.CHIME -> playResource("/sounds/salah-chime.wav")
         }
+    }
+
+    private fun playResource(path: String) = thread(isDaemon = true, name = "salah-sound") {
+        runCatching {
+            val stream = Notifier::class.java.getResourceAsStream(path)!!.buffered()
+            AudioSystem.getAudioInputStream(stream).use { audio ->
+                val clip = AudioSystem.getClip()
+                clip.open(audio)
+                clip.start()
+                Thread.sleep((clip.microsecondLength / 1000) + 200)
+                clip.close()
+            }
+        }.onFailure { Toolkit.getDefaultToolkit().beep() }
     }
 }
 

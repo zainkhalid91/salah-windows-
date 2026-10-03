@@ -24,6 +24,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import salah.app.AppModel
+import salah.core.AppText
 import salah.core.Prayer
 import salah.core.PrayerReminder
 import salah.core.QuietHours
@@ -39,28 +40,28 @@ fun RemindersScreen(model: AppModel) {
     val r = model.config.reminders
     val now = Instant.now()
     Pane(
-        "Reminders",
-        "Salah plans the next 3 days of reminders and shows them from the notification area. Keep it starting with Windows so they're never missed.",
+        tr("Reminders"),
+        tr("Salah plans the next 3 days of reminders and shows them from the notification area. Keep it starting with Windows so they're never missed."),
     ) {
         SettingsGroup {
             row {
                 val hint = when {
-                    !r.enabled -> "Off"
-                    model.location == null -> "Set a location first"
-                    model.scheduled.isEmpty() -> "Shown as Salah notifications"
-                    else -> "${model.scheduled.size} planned, through ${TimeFormatting.shortDate(model.scheduled.last().date)}"
+                    !r.enabled -> tr("Off")
+                    model.location == null -> tr("Set a location first")
+                    model.scheduled.isEmpty() -> tr("Shown as Salah notifications")
+                    else -> tr("{0} planned, through {1}", model.scheduled.size, AppText.shortDate(model.scheduled.last().date, LocalLang.current))
                 }
-                SettingsRow("Prayer reminders", hint) {
+                SettingsRow(tr("Prayer reminders"), hint) {
                     SalahSwitch(r.enabled) { v -> model.update { it.copy(reminders = it.reminders.copy(enabled = v)) } }
                 }
             }
             row {
                 val until = r.pausedUntil
                 val hint = if (until != null && r.isPaused(now)) {
-                    "Paused until ${TimeFormatting.shortDate(localDate(until, model.zone))}, ${model.clock(until)}"
+                    tr("Paused until {0}", "${AppText.shortDate(localDate(until, model.zone), LocalLang.current)}, ${model.clock(until)}")
                 } else null
-                SettingsRow("Pause", hint) {
-                    if (r.isPaused(now)) SecondaryButton("Resume") { model.pause(null) } else PauseMenu(model, enabled = r.enabled)
+                SettingsRow(tr("Pause"), hint) {
+                    if (r.isPaused(now)) SecondaryButton(tr("Resume")) { model.pause(null) } else PauseMenu(model, enabled = r.enabled)
                 }
             }
         }
@@ -71,14 +72,21 @@ fun RemindersScreen(model: AppModel) {
 
         SettingsGroup {
             row {
-                SettingsRow("Sound") {
-                    DropdownPicker(ReminderSound.entries.map { it to it.displayName }, r.sound, { v ->
+                SettingsRow(tr("Sound")) {
+                    DropdownPicker(ReminderSound.entries.map { it to tr(it.displayName) }, r.sound, { v ->
                         model.update { it.copy(reminders = it.reminders.copy(sound = v)) }
                     })
                 }
             }
             row {
-                SettingsRow("Quiet hours", "No reminders are shown in this window") {
+                SettingsRow(tr("Azan at prayer time"), tr("For the five prayers. Early reminders keep the sound above.")) {
+                    SalahSwitch(r.azan && r.sound != ReminderSound.SILENT, enabled = r.sound != ReminderSound.SILENT) { v ->
+                        model.update { it.copy(reminders = it.reminders.copy(azan = v)) }
+                    }
+                }
+            }
+            row {
+                SettingsRow(tr("Quiet hours"), tr("No reminders are shown in this window")) {
                     TimeField(r.quietHours.start, r.quietHours.enabled) { v -> model.update { it.quiet { q -> q.copy(start = v) } } }
                     Label("–")
                     TimeField(r.quietHours.end, r.quietHours.enabled) { v -> model.update { it.quiet { q -> q.copy(end = v) } } }
@@ -86,8 +94,8 @@ fun RemindersScreen(model: AppModel) {
                 }
             }
             row {
-                SettingsRow("Check a reminder looks right") {
-                    AccentButton("Send test notification") { model.sendTestNotification() }
+                SettingsRow(tr("Check a reminder looks right")) {
+                    AccentButton(tr("Send test notification")) { model.sendTestNotification() }
                 }
             }
         }
@@ -102,12 +110,12 @@ private fun PrayerRow(model: AppModel, p: Prayer) {
     val pr = r.reminder(p)
     val enabled = r.enabled && pr.enabled
     fun set(body: (PrayerReminder) -> PrayerReminder) = model.update { it.copy(reminders = it.reminders.update(p, body)) }
-    SettingsRow(p.displayName) {
+    SettingsRow(tr(p.displayName)) {
         DropdownPicker(
-            listOf(0 to "No early reminder") + listOf(5, 10, 15, 30).map { it to "$it min before" },
+            listOf(0 to tr("No early reminder")) + listOf(5, 10, 15, 30).map { it to tr("{0} min before", it) },
             pr.leadMinutes, { v -> set { it.copy(leadMinutes = v) } }, enabled = enabled,
         )
-        SalahCheckbox("At prayer time", pr.atTime, enabled) { v -> set { it.copy(atTime = v) } }
+        SalahCheckbox(tr("At prayer time"), pr.atTime, enabled) { v -> set { it.copy(atTime = v) } }
         SalahSwitch(pr.enabled, enabled = r.enabled) { v -> set { it.copy(enabled = v) } }
     }
 }
@@ -118,12 +126,12 @@ private fun PauseMenu(model: AppModel, enabled: Boolean) {
     var custom by remember { mutableStateOf(false) }
     val c = palette
     Box {
-        SecondaryButton("Pause until…  ⌄", enabled = enabled) { open = true }
+        SecondaryButton(tr("Pause until…  ⌄"), enabled = enabled) { open = true }
         DropdownMenu(open, { open = false }, Modifier.background(c.highlight)) {
-            DropdownMenuItem({ Label("1 hour") }, { open = false; model.pause(Instant.now().plusSeconds(3600)) })
-            DropdownMenuItem({ Label("Until tomorrow") }, { open = false; model.pause(model.today(Instant.now()).plusDays(1).atStartOfDay(model.zone).toInstant()) })
+            DropdownMenuItem({ Label(tr("1 hour")) }, { open = false; model.pause(Instant.now().plusSeconds(3600)) })
+            DropdownMenuItem({ Label(tr("Until tomorrow")) }, { open = false; model.pause(model.today(Instant.now()).plusDays(1).atStartOfDay(model.zone).toInstant()) })
             HorizontalDivider(color = c.line)
-            DropdownMenuItem({ Label("Custom…") }, { open = false; custom = true })
+            DropdownMenuItem({ Label(tr("Custom…")) }, { open = false; custom = true })
         }
     }
     if (custom) CustomPauseSheet(model) { custom = false }
@@ -136,7 +144,7 @@ private fun CustomPauseSheet(model: AppModel, close: () -> Unit) {
     var day by remember { mutableStateOf(start.toLocalDate()) }
     var time by remember { mutableStateOf(String.format(Locale.ROOT, "%02d:%02d", start.hour, start.minute)) }
     Sheet(onDismiss = close, width = 340.dp) {
-        Label("Pause reminders until", size = 15f, weight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+        Label(tr("Pause reminders until"), size = 15f, weight = androidx.compose.ui.text.font.FontWeight.SemiBold)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
             IconButtonBox({ if (day > model.today(Instant.now())) day = day.minusDays(1) }) { Label("‹", size = 16f) }
             Label(TimeFormatting.shortDate(day), modifier = Modifier.width(96.dp))
@@ -145,8 +153,8 @@ private fun CustomPauseSheet(model: AppModel, close: () -> Unit) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(Modifier.weight(1f))
-            SecondaryButton("Cancel", onClick = close)
-            AccentButton("Pause") {
+            SecondaryButton(tr("Cancel"), onClick = close)
+            AccentButton(tr("Pause")) {
                 val m = QuietHours.minutes(time) ?: 0
                 val until = day.atTime(m / 60, m % 60).atZone(model.zone).toInstant()
                 if (until > Instant.now()) model.pause(until)

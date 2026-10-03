@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,6 +33,7 @@ fun TrayPanel(model: AppModel, onOpen: () -> Unit = {}, onQuit: () -> Unit = {})
     val now = model.now
     val state = model.clockState(now)
     val d = model.config.display
+    val lang = d.lang
     Column(
         Modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)).background(c.background)
             .border(1.dp, c.line, RoundedCornerShape(10.dp)).padding(14.dp),
@@ -44,15 +43,15 @@ fun TrayPanel(model: AppModel, onOpen: () -> Unit = {}, onQuit: () -> Unit = {})
         if (state != null && n != null) {
             val nowP = state.nowPrayer
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Label(if (nowP != null) "NOW" else if (n.isTomorrow) "NEXT · TOMORROW" else "NEXT PRAYER", size = 10.5f, weight = FontWeight.SemiBold, color = c.secondary, tracking = 1.2f)
-                val label = nowP?.let { state.today.label(it, d.jumuahRelabel) } ?: n.label(d.jumuahRelabel)
+                Label(if (nowP != null) tr("NOW") else if (n.isTomorrow) tr("NEXT · TOMORROW") else tr("NEXT PRAYER"), size = 10.5f, weight = FontWeight.SemiBold, color = c.secondary, tracking = 1.2f)
+                val label = nowP?.let { state.today.label(it, d.jumuahRelabel, lang) } ?: n.label(d.jumuahRelabel, lang)
                 Row(verticalAlignment = Alignment.Bottom) {
                     PixelText(label.uppercase(), 22f, color = if (nowP != null) c.accent else c.text, modifier = Modifier.weight(1f))
                     PixelText(model.clock(nowP?.let { state.today.time(it) } ?: n.time), 18f, FontWeight.Bold)
                 }
                 Label(
-                    if (nowP != null) "Next: ${n.label(d.jumuahRelabel)} in ${TimeFormatting.short(n.secondsRemaining(now))}"
-                    else "in ${TimeFormatting.countdown(n.secondsRemaining(now))}",
+                    if (nowP != null) tr("Next: {0} in {1}", n.label(d.jumuahRelabel, lang), TimeFormatting.short(n.secondsRemaining(now)))
+                    else tr("IN") + " " + TimeFormatting.countdown(n.secondsRemaining(now)),
                     size = 12f, color = c.secondary,
                 )
             }
@@ -63,34 +62,34 @@ fun TrayPanel(model: AppModel, onOpen: () -> Unit = {}, onQuit: () -> Unit = {})
                     val color = if (p == Prayer.SUNRISE) c.secondary else if (isNext) c.accent else c.text
                     val size = if (p == Prayer.SUNRISE) 11.5f else 13f
                     Row {
-                        Label(state.today.label(p, d.jumuahRelabel), size = size, color = color, weight = if (isNext) FontWeight.SemiBold else FontWeight.Normal, modifier = Modifier.weight(1f))
+                        Label(state.today.label(p, d.jumuahRelabel, lang), size = size, color = color, weight = if (isNext) FontWeight.SemiBold else FontWeight.Normal, modifier = Modifier.weight(1f))
                         Label(state.today.time(p)?.let { model.clock(it) } ?: "—", size = size, color = color, weight = if (isNext) FontWeight.SemiBold else FontWeight.Normal)
                     }
                 }
             }
             Label("${model.location?.name ?: ""} · ${model.config.calculation.methodShortName(model.location)}", size = 11f, color = c.secondary)
         } else if (model.location == null) {
-            Label("Set your location to see prayer times.", color = c.secondary)
+            Label(tr("Set your location to see prayer times."), color = c.secondary)
         } else {
-            Label("Prayer times can't be calculated for this location today.", color = c.secondary)
+            Label(tr("Prayer times can't be calculated for this location today."), color = c.secondary)
         }
         model.updater.availableRelease?.let { r ->
             HorizontalDivider(color = c.line)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Label("Salah ${r.version} is available", size = 12.5f, weight = FontWeight.Medium, modifier = Modifier.weight(1f))
-                AccentButton("Update") { model.updater.install(r) { model.onQuitCompletely() } }
+                Label(tr("Salah {0} is available", r.version), size = 12.5f, weight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                AccentButton(tr("Update")) { model.updater.install(r) { model.onQuitCompletely() } }
             }
         }
         Spacer(Modifier.weight(1f))
         HorizontalDivider(color = c.line)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Label("Reminders", modifier = Modifier.weight(1f))
+            Label(tr("Reminders"), modifier = Modifier.weight(1f))
             SalahSwitch(model.config.reminders.enabled) { v -> model.update { it.copy(reminders = it.reminders.copy(enabled = v)) } }
         }
         Row {
-            SecondaryButton("Open Salah", onClick = onOpen)
+            SecondaryButton(tr("Open Salah"), onClick = onOpen)
             Spacer(Modifier.weight(1f))
-            SecondaryButton("Quit completely", onClick = onQuit)
+            SecondaryButton(tr("Quit completely"), onClick = onQuit)
         }
     }
 }

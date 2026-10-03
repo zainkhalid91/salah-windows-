@@ -1,6 +1,11 @@
 package salah.app
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.window.WindowDraggableArea
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -9,6 +14,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
@@ -21,18 +27,24 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ApplicationScope
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import kotlinx.coroutines.delay
+import salah.app.platform.WindowFrame
 import salah.app.platform.WindowsTheme
 import salah.app.platform.systemDarkTheme
+import salah.app.ui.LocalWindowChrome
 import salah.app.ui.Localized
+import salah.app.ui.ResizeEdges
 import salah.app.ui.RootView
 import salah.app.ui.SalahTheme
 import salah.app.ui.ScheduleSpan
 import salah.app.ui.ToastCard
 import salah.app.ui.TrayPanel
+import salah.app.ui.WindowChrome
+import salah.app.ui.palette
 import salah.core.AppInstance
 import salah.core.AppText
 import salah.core.ThemeSetting
@@ -131,9 +143,14 @@ private fun run(args: Array<String>) {
             state = windowState,
             title = "Salah",
             icon = painterResource("icons/salah.png"),
+            // The app's top bar is the title bar, like modern Windows apps.
+            undecorated = true,
             onPreviewKeyEvent = { e -> handleKey(e, model, close = { if (trayEnabled) windowOpen = false else quitCompletely() }, quit = ::quitCompletely) },
         ) {
-            LaunchedEffect(Unit) { window.minimumSize = Dimension(640, 420) }
+            LaunchedEffect(Unit) {
+                window.minimumSize = Dimension(720, 420)
+                WindowFrame.style(window)
+            }
             LaunchedEffect(bringToFront) {
                 if (bringToFront > 0) {
                     if (window.extendedState and Frame.ICONIFIED != 0) window.extendedState = Frame.NORMAL
@@ -141,9 +158,24 @@ private fun run(args: Array<String>) {
                     window.requestFocus()
                 }
             }
-            // Match the native title bar to the app, so dark mode is dark edge to edge.
-            LaunchedEffect(dark) { WindowsTheme.applyTitleBar(window, dark) }
-            SalahTheme(dark) { Localized(model.config.display.lang) { RootView(model) } }
+            val maximized = windowState.placement == WindowPlacement.Maximized
+            val chrome = WindowChrome(
+                isMaximized = maximized,
+                minimize = { windowState.isMinimized = true },
+                toggleMaximize = { windowState.placement = if (maximized) WindowPlacement.Floating else WindowPlacement.Maximized },
+                close = { if (trayEnabled) windowOpen = false else quitCompletely() },
+                dragArea = { modifier, content -> WindowDraggableArea(modifier) { content() } },
+            )
+            SalahTheme(dark) {
+                Localized(model.config.display.lang) {
+                    CompositionLocalProvider(LocalWindowChrome provides chrome) {
+                        Box(Modifier.fillMaxSize().then(if (maximized) Modifier else Modifier.border(1.dp, palette.line))) {
+                            RootView(model)
+                            if (!maximized) ResizeEdges(window)
+                        }
+                    }
+                }
+            }
         }
 
         if (trayEnabled) NotificationAreaIcon(model, dark, onQuit = ::quitCompletely)

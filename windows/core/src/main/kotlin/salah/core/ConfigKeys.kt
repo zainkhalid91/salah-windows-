@@ -16,8 +16,6 @@ class ConfigKey(
     private val getter: (SalahConfig) -> String,
     private val setter: ((SalahConfig, String) -> SalahConfig)?,
 ) {
-    val isReadOnly: Boolean get() = setter == null
-
     fun get(c: SalahConfig): String = getter(c)
 
     fun set(c: SalahConfig, value: String): SalahConfig = (setter ?: throw ConfigKeyException.ReadOnly(key))(c, value)
@@ -89,7 +87,14 @@ object ConfigKeys {
                 { it.display.menuBarStyle.raw },
                 { c, v -> c.copy(display = c.display.copy(menuBarStyle = MenuBarStyle.entries.first { it.raw == v })) },
             ),
+            enumKey(
+                "display.language", AppLanguage.entries.map { it.raw },
+                { it.display.lang.raw },
+                { c, v -> c.copy(display = c.display.copy(language = AppLanguage.entries.first { it.raw == v })) },
+            ),
+            boolKey("display.showSunnahTimes", { it.display.showSunnahTimes }) { c, v -> c.copy(display = c.display.copy(showSunnahTimes = v)) },
             boolKey("reminders.enabled", { it.reminders.enabled }) { c, v -> c.copy(reminders = c.reminders.copy(enabled = v)) },
+            boolKey("reminders.azan", { it.reminders.azan }) { c, v -> c.copy(reminders = c.reminders.copy(azan = v)) },
             ConfigKey(
                 "reminders.pausedUntil", "an ISO 8601 date-time, or “none”",
                 { c -> c.reminders.pausedUntil?.let { Iso.instant(it) } ?: "none" },

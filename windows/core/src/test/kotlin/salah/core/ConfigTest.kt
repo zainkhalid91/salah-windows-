@@ -161,7 +161,7 @@ class ConfigTest {
         assertTrue(rows[1].endsWith(",Asia/Singapore,Singapore (MUIS)"), rows[1])
         val ics = ScheduleExporter.ics(days, Fixtures.singapore, true, Fixtures.date("2026-09-25T00:00:00Z"))
         assertEquals(10, ics.split("BEGIN:VEVENT").size - 1)
-        assertTrue(ics.contains("SUMMARY:Jumu'ah"))
+        assertTrue(ics.contains("SUMMARY:Jumuah"))
         assertTrue(ics.contains("UID:salah-2026-09-25-dhuhr@salah.local"))
     }
 

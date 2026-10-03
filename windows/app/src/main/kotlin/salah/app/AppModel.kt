@@ -18,9 +18,11 @@ import salah.app.platform.LocationProvider
 import salah.app.platform.Notifier
 import salah.app.platform.Updater
 import salah.app.platform.WindowsIntegration
+import salah.core.AppText
 import salah.core.ConfigException
 import salah.core.ConfigStore
 import salah.core.DaySchedule
+import salah.core.ExtraTime
 import salah.core.IslamicAlertPlanner
 import salah.core.NotificationPlanner
 import salah.core.PlannedAlert
@@ -58,6 +60,8 @@ class AppModel(
     var previewDate by mutableStateOf<LocalDate?>(null)
     /** A prayer whose details replace the next-prayer display. */
     var detailPrayer by mutableStateOf<Prayer?>(null)
+    /** A sunnah time whose details replace the next-prayer display. */
+    var detailExtra by mutableStateOf<ExtraTime?>(null)
     var showLocationSheet by mutableStateOf(false)
     val schedule = salah.app.ui.ScheduleState()
     var scheduled by mutableStateOf<List<PlannedNotification>>(emptyList())
@@ -115,18 +119,24 @@ class AppModel(
 
     fun today(at: Instant = now): LocalDate = localDate(at, zone)
 
-    fun clock(t: Instant): String = TimeFormatting.clock(t, zone, config.display.use24HourClock)
+    fun clock(t: Instant): String = TimeFormatting.clock(t, zone, config.display.use24HourClock, lang = config.display.lang)
+
+    fun clearDetail() {
+        detailPrayer = null
+        detailExtra = null
+    }
 
     /** "☾ Asr · 12m", "☾ 4:05 PM" or "Salah": the tray tooltip, like the macOS menu bar label. */
     val trayLabel: String
         get() {
             val st = clockState() ?: return "Salah"
             val d = config.display
-            st.nowPrayer?.let { return "☾ ${st.today.label(it, d.jumuahRelabel)} · now" }
+            val lang = d.lang
+            st.nowPrayer?.let { return "☾ ${st.today.label(it, d.jumuahRelabel, lang)} · ${AppText.t(lang, "now")}" }
             val n = st.next ?: return "Salah"
             return when (d.menuBarStyle) {
-                salah.core.MenuBarStyle.NAME_AND_COUNTDOWN -> "☾ ${n.label(d.jumuahRelabel)} · ${TimeFormatting.short(n.secondsRemaining(now))}"
-                salah.core.MenuBarStyle.TIME_ONLY -> "☾ ${n.label(d.jumuahRelabel)} ${clock(n.time)}"
+                salah.core.MenuBarStyle.NAME_AND_COUNTDOWN -> "☾ ${n.label(d.jumuahRelabel, lang)} · ${TimeFormatting.short(n.secondsRemaining(now))}"
+                salah.core.MenuBarStyle.TIME_ONLY -> "☾ ${n.label(d.jumuahRelabel, lang)} ${clock(n.time)}"
                 salah.core.MenuBarStyle.ICON_ONLY -> "Salah"
             }
         }
@@ -159,7 +169,7 @@ class AppModel(
         update { it.copy(location = loc) }
         showLocationSheet = false
         previewDate = null
-        detailPrayer = null
+        clearDetail()
     }
 
     fun resetToDefaults() {
@@ -199,7 +209,7 @@ class AppModel(
         if (windowVisible == v) return
         windowVisible = v
         wake.trySend(Unit)
-        if (!v) detailPrayer = null
+        if (!v) clearDetail()
     }
 
     fun openTrayPanel(v: Boolean) {
@@ -251,7 +261,9 @@ class AppModel(
             for (p in lastPlan) {
                 if (p.fireDate <= nowI && p.id !in delivered) {
                     delivered += p.id
-                    if (nowI.epochSecond - p.fireDate.epochSecond <= 300) notifier.show(p.title, p.body, config.reminders.sound) { showMainWindow() }
+                    if (nowI.epochSecond - p.fireDate.epochSecond <= 300) {
+                        notifier.show(p.title, p.body, config.reminders.sound, NotificationPlanner.playsAzan(p, config.reminders)) { showMainWindow() }
+                    }
                 }
             }
             for (a in lastAlerts) {
@@ -262,8 +274,8 @@ class AppModel(
             }
             while (delivered.size > 200) delivered.remove(delivered.first())
             val plan = withContext(Dispatchers.Default) { NotificationPlanner.plan(nowI, config) }
-            // Islamic date alerts (new month, special days), in the Windows display language.
-            val alerts = withContext(Dispatchers.Default) { IslamicAlertPlanner.plan(nowI, config) }
+            // Islamic date alerts (new month, special days), in the app's language.
+            val alerts = withContext(Dispatchers.Default) { IslamicAlertPlanner.plan(nowI, config, config.display.lang.locale()) }
             lastPlan = plan
             lastAlerts = alerts
             scheduled = plan
@@ -281,11 +293,12 @@ class AppModel(
     fun sendTestNotification() {
         val st = clockState(Instant.now())
         val next = st?.next
-        val label = next?.label(config.display.jumuahRelabel) ?: "Asr"
+        val lang = config.display.lang
+        val label = next?.label(config.display.jumuahRelabel, lang) ?: AppText.t(lang, "Asr")
         val lead = next?.let { config.reminders.reminder(it.prayer).leadMinutes } ?: 10
-        val title = NotificationPlanner.title(label, if (lead == 0) 10 else lead)
+        val title = NotificationPlanner.title(label, if (lead == 0) 10 else lead, lang)
         val loc = location
-        val body = if (next != null && loc != null) NotificationPlanner.body(next.time, loc, config.display.use24HourClock) else "Test notification"
+        val body = if (next != null && loc != null) NotificationPlanner.body(next.time, loc, config.display.use24HourClock, lang) else AppText.t(lang, "Test notification")
         notifier.show(title, body, config.reminders.sound) { showMainWindow() }
     }
 

@@ -3,7 +3,6 @@ package salah.core
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
@@ -11,19 +10,19 @@ import java.util.Locale
 /** Formatting shared by the app, tray, notifications and CLI so they read identically. */
 object TimeFormatting {
     /** "20:10" or "8:10 PM" in the given zone. */
-    fun clock(t: Instant, zone: ZoneId, use24Hour: Boolean, padHour: Boolean = false): String {
-        val (time, period) = parts(t, zone, use24Hour, padHour)
+    fun clock(t: Instant, zone: ZoneId, use24Hour: Boolean, padHour: Boolean = false, lang: AppLanguage = AppLanguage.EN): String {
+        val (time, period) = parts(t, zone, use24Hour, padHour, lang)
         return if (period.isEmpty()) time else "$time $period"
     }
 
     /** Splits a clock time into its digits and AM/PM marker, so views can style them separately. */
-    fun parts(t: Instant, zone: ZoneId, use24Hour: Boolean, padHour: Boolean = false): Pair<String, String> {
+    fun parts(t: Instant, zone: ZoneId, use24Hour: Boolean, padHour: Boolean = false, lang: AppLanguage = AppLanguage.EN): Pair<String, String> {
         val z = t.atZone(zone)
         val h = z.hour
         val m = z.minute
         if (use24Hour) return String.format(Locale.ROOT, "%02d:%02d", h, m) to ""
         val h12 = if (h % 12 == 0) 12 else h % 12
-        return String.format(Locale.ROOT, if (padHour) "%02d:%02d" else "%d:%02d", h12, m) to (if (h < 12) "AM" else "PM")
+        return String.format(Locale.ROOT, if (padHour) "%02d:%02d" else "%d:%02d", h12, m) to AppText.period(if (h < 12) "AM" else "PM", lang)
     }
 
     /** "HH:MM:SS" with zero padding; negative values clamp to zero. */
@@ -69,6 +68,4 @@ object Iso {
 
     fun parse(s: String): Instant? = runCatching { Instant.parse(s) }.getOrNull()
         ?: runCatching { java.time.OffsetDateTime.parse(s).toInstant() }.getOrNull()
-
-    val utc: ZoneId = ZoneOffset.UTC
 }

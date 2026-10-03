@@ -29,12 +29,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import salah.app.AppModel
 import salah.app.platform.WindowsIntegration
+import salah.core.AppText
 import salah.core.DaySchedule
 import salah.core.Prayer
 import salah.core.PrayerSchedule
 import salah.core.ScheduleExporter
 import salah.core.TimeFormatting
-import salah.core.monthName
 import java.time.LocalDate
 
 enum class ScheduleSpan(val title: String) { DAY("Day"), WEEK("Week"), MONTH("Month") }
@@ -66,29 +66,30 @@ fun ScheduleScreen(model: AppModel) {
         ScheduleSpan.WEEK -> PrayerSchedule.range(start, 7, loc, model.config.calculation)
         ScheduleSpan.MONTH -> PrayerSchedule.month(start, loc, model.config.calculation)
     }
+    val lang = model.config.display.lang
     val title = run {
         val first = days.firstOrNull()?.date
         val last = days.lastOrNull()?.date
-        if (first == null || last == null) "Schedule" else when (s.span) {
-            ScheduleSpan.DAY -> if (first == today) "Today" else TimeFormatting.longDate(first)
-            ScheduleSpan.WEEK -> if (first == today) "This week" else "${first.dayOfMonth} ${first.monthName.take(3)} – ${last.dayOfMonth} ${last.monthName.take(3)} ${last.year}"
-            ScheduleSpan.MONTH -> "${first.monthName} ${first.year}"
+        if (first == null || last == null) tr("Schedule") else when (s.span) {
+            ScheduleSpan.DAY -> if (first == today) tr("Today") else AppText.longDate(first, lang, includeYear = true)
+            ScheduleSpan.WEEK -> if (first == today) tr("This week") else "${AppText.shortDate(first, lang)} – ${AppText.shortDate(last, lang)}"
+            ScheduleSpan.MONTH -> AppText.monthYear(first, lang)
         }
     }
 
-    Pane(title, model.location?.let { "${it.name} · ${model.config.methodName}" } ?: "Set a location to see the schedule.") {
+    Pane(title, model.location?.let { "${it.name} · ${tr(model.config.methodName)}" } ?: tr("Set a location to see the schedule.")) {
         Row(Modifier.fillMaxWidth().padding(bottom = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PillPicker(ScheduleSpan.entries.map { it to it.title }, s.span, { s.span = it })
+            PillPicker(ScheduleSpan.entries.map { it to tr(it.title) }, s.span, { s.span = it })
             Spacer(Modifier.weight(1f))
-            IconButtonBox({ s.step(-1, today) }, "Previous (←)") { Label("‹", size = 16f) }
-            SecondaryButton("Today") { s.anchor = null }
-            IconButtonBox({ s.step(1, today) }, "Next (→)") { Label("›", size = 16f) }
+            IconButtonBox({ s.step(-1, today) }, tr("Previous (←)")) { Label("‹", size = 16f) }
+            SecondaryButton(tr("Today")) { s.anchor = null }
+            IconButtonBox({ s.step(1, today) }, tr("Next (→)")) { Label("›", size = 16f) }
             ExportMenu(model, days)
         }
         if (days.isNotEmpty()) ScheduleTable(model, days, today)
-        Label("Sunrise marks the end of Fajr and is not a prayer.", color = c.secondary, modifier = Modifier.padding(top = 14.dp))
+        Label(tr("Sunrise marks the end of Fajr and is not a prayer."), color = c.secondary, modifier = Modifier.padding(top = 14.dp))
         if (days.any { it.hasUndefined }) {
-            Label("— means the time can't be calculated here on that date.", color = c.accent, modifier = Modifier.padding(top = 4.dp))
+            Label(tr("— means the time can't be calculated here on that date."), color = c.accent, modifier = Modifier.padding(top = 4.dp))
         }
     }
 }
@@ -99,17 +100,17 @@ private fun ExportMenu(model: AppModel, days: List<DaySchedule>) {
     val c = palette
     val loc = model.location
     Box {
-        SecondaryButton("Export  ⌄", enabled = days.isNotEmpty() && loc != null) { open = true }
+        SecondaryButton(tr("Export  ⌄"), enabled = days.isNotEmpty() && loc != null) { open = true }
         DropdownMenu(open, { open = false }, Modifier.background(c.highlight)) {
             fun item(text: String, action: () -> Unit) = @Composable {
                 DropdownMenuItem(text = { Label(text) }, onClick = { open = false; action() }, modifier = Modifier.heightIn(max = 34.dp))
             }
             if (loc != null && days.isNotEmpty()) {
-                item("Copy to clipboard") { WindowsIntegration.copy(ScheduleExporter.text(days, loc, model.config.display)) }()
-                item("Export CSV…") {
+                item(tr("Copy to clipboard")) { WindowsIntegration.copy(ScheduleExporter.text(days, loc, model.config.display)) }()
+                item(tr("Export CSV…")) {
                     WindowsIntegration.saveFile("salah-${days.first().date}.csv", "csv")?.writeText(ScheduleExporter.csv(days))
                 }()
-                item("Export calendar (ICS)…") {
+                item(tr("Export calendar (ICS)…")) {
                     WindowsIntegration.saveFile("salah-${days.first().date}.ics", "ics")
                         ?.writeText(ScheduleExporter.ics(days, loc, model.config.display.jumuahRelabel))
                 }()
@@ -123,8 +124,8 @@ private fun ScheduleTable(model: AppModel, days: List<DaySchedule>, today: Local
     val c = palette
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).border(1.dp, c.line, RoundedCornerShape(10.dp))) {
         Row(Modifier.fillMaxWidth()) {
-            HeaderCell("Date", Modifier.weight(1.25f))
-            for (p in Prayer.entries) HeaderCell(p.displayName, Modifier.weight(1f))
+            HeaderCell(tr("Date"), Modifier.weight(1.25f))
+            for (p in Prayer.entries) HeaderCell(tr(p.displayName), Modifier.weight(1f))
         }
         for (d in days) {
             HorizontalDivider(color = c.line)
@@ -132,7 +133,7 @@ private fun ScheduleTable(model: AppModel, days: List<DaySchedule>, today: Local
             Row(Modifier.fillMaxWidth().background(if (isToday) c.highlight else Color.Transparent).heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
                 Row(Modifier.weight(1.25f), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.width(3.dp).heightIn(min = 40.dp).fillMaxHeight().background(if (isToday) c.accent else Color.Transparent))
-                    Label(TimeFormatting.shortDate(d.date), modifier = Modifier.padding(start = 11.dp), weight = if (isToday) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1)
+                    Label(AppText.shortDate(d.date, LocalLang.current), modifier = Modifier.padding(start = 11.dp), weight = if (isToday) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1)
                 }
                 for (p in Prayer.entries) TimeCell(model, d, p, Modifier.weight(1f))
             }
@@ -150,10 +151,10 @@ private fun HeaderCell(text: String, modifier: Modifier) {
 @Composable
 private fun TimeCell(model: AppModel, d: DaySchedule, p: Prayer, modifier: Modifier) {
     val c = palette
-    val t = d.time(p)?.let { TimeFormatting.clock(it, d.zone, model.config.display.use24HourClock) } ?: "—"
+    val t = d.time(p)?.let { TimeFormatting.parts(it, d.zone, model.config.display.use24HourClock).first } ?: "—"
     val jumuah = p == Prayer.DHUHR && d.isFriday && model.config.display.jumuahRelabel
     Column(modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
         PixelText(t, 15f, FontWeight.Bold, if (p == Prayer.SUNRISE) c.secondary else c.text)
-        if (jumuah) Label("JUMU'AH", size = 9f, weight = FontWeight.SemiBold, color = c.accent, tracking = 0.4f)
+        if (jumuah) Label(tr(Prayer.JUMUAH).uppercase(), size = 9f, weight = FontWeight.SemiBold, color = c.accent, tracking = 0.4f)
     }
 }

@@ -3,10 +3,14 @@ package salah.app
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.use
+import salah.app.ui.Localized
 import salah.app.ui.RootView
 import salah.app.ui.SalahTheme
+import salah.core.AppLanguage
 import salah.core.CalculationSettings
 import salah.core.ConfigStore
+import salah.core.DisplaySettings
+import salah.core.ExtraTime
 import salah.core.MethodID
 import salah.core.Prayer
 import salah.core.SalahConfig
@@ -30,7 +34,10 @@ object Snapshot {
         outDir.mkdirs()
         val next = OffsetDateTime.parse("2026-10-01T17:18:12+08:00").toInstant()
         val now = OffsetDateTime.parse("2026-10-01T16:09:30+08:00").toInstant()
-        val config = SalahConfig(location = singapore, calculation = CalculationSettings(method = MethodID.SINGAPORE))
+        val config = SalahConfig(
+            location = singapore, calculation = CalculationSettings(method = MethodID.SINGAPORE),
+            display = DisplaySettings(language = AppLanguage.EN),
+        )
         for (dark in listOf(false, true)) {
             val sfx = if (dark) "dark" else "light"
             shot(outDir, "today-next-$sfx", config, next, dark, 940, 560, scale)
@@ -38,7 +45,9 @@ object Snapshot {
             shot(outDir, "today-narrow-$sfx", config, next, dark, 640, 920, scale)
             shot(outDir, "today-detail-$sfx", config, next, dark, 940, 560, scale) { it.detailPrayer = Prayer.ASR }
             shot(outDir, "today-preview-$sfx", config, next, dark, 940, 560, scale) { it.previewDate = LocalDate.of(2026, 10, 9) }
-            shot(outDir, "welcome-$sfx", SalahConfig(), next, dark, 940, 560, scale)
+            shot(outDir, "welcome-$sfx", SalahConfig(display = config.display), next, dark, 940, 560, scale)
+            shot(outDir, "language-$sfx", SalahConfig(), next, dark, 940, 560, scale)
+            shot(outDir, "today-sunnah-$sfx", config, next, dark, 940, 760, scale) { it.detailExtra = ExtraTime.TAHAJJUD }
             shot(outDir, "calendar-$sfx", config, next, dark, 1100, 1500, scale) { it.tab = AppModel.Tab.CALENDAR }
             shot(outDir, "schedule-$sfx", config, next, dark, 940, 640, scale) { it.tab = AppModel.Tab.SCHEDULE }
             shot(outDir, "reminders-$sfx", config, next, dark, 940, 760, scale) { it.tab = AppModel.Tab.REMINDERS }
@@ -51,13 +60,15 @@ object Snapshot {
         val tromso = config.copy(location = SavedLocation("Tromsø", 69.6492, 18.9553, "Europe/Oslo", "NO"), calculation = CalculationSettings())
         shot(outDir, "today-polar-light", tromso, OffsetDateTime.parse("2026-06-21T12:00:00+02:00").toInstant(), false, 940, 560, scale)
         shot(outDir, "tray-panel-light", config, next, false, 300, TRAY_PANEL_HEIGHT, scale, tray = true)
-        // The calendar follows the display language.
-        val saved = java.util.Locale.getDefault()
-        for (tag in listOf("ar", "ur")) {
-            java.util.Locale.setDefault(java.util.Locale.forLanguageTag(tag))
-            shot(outDir, "calendar-$tag-light", config, next, false, 1100, 1500, scale) { it.tab = AppModel.Tab.CALENDAR }
-        }
-        java.util.Locale.setDefault(saved)
+        // The whole app in Arabic, right to left.
+        val ar = config.copy(display = config.display.copy(language = AppLanguage.AR))
+        shot(outDir, "today-ar-light", ar, next, false, 940, 760, scale)
+        shot(outDir, "today-ar-dark", ar, next, true, 940, 760, scale)
+        shot(outDir, "calendar-ar-light", ar, next, false, 1100, 1500, scale) { it.tab = AppModel.Tab.CALENDAR }
+        shot(outDir, "schedule-ar-light", ar, next, false, 940, 640, scale) { it.tab = AppModel.Tab.SCHEDULE }
+        shot(outDir, "reminders-ar-light", ar, next, false, 940, 760, scale) { it.tab = AppModel.Tab.REMINDERS }
+        shot(outDir, "settings-ar-light", ar, next, false, 940, 1000, scale) { it.tab = AppModel.Tab.SETTINGS }
+        shot(outDir, "tray-panel-ar-light", ar, next, false, 300, TRAY_PANEL_HEIGHT, scale, tray = true)
         shot(outDir, "tray-panel-dark", config, next, true, 300, TRAY_PANEL_HEIGHT, scale, tray = true)
         shot(outDir, "toast-light", config, next, false, 380, TOAST_HEIGHT, scale, toast = true)
         shot(outDir, "toast-dark", config, next, true, 380, TOAST_HEIGHT, scale, toast = true)
@@ -73,10 +84,12 @@ object Snapshot {
         setup(model)
         ImageComposeScene((w * scale).toInt(), (h * scale).toInt(), Density(scale)) {
             SalahTheme(dark) {
-                when {
-                    tray -> salah.app.ui.TrayPanel(model)
-                    toast -> salah.app.ui.ToastCard("Asr in 10 minutes", "16:03 · Singapore", onOpen = {}, onClose = {})
-                    else -> RootView(model)
+                Localized(model.config.display.lang) {
+                    when {
+                        tray -> salah.app.ui.TrayPanel(model)
+                        toast -> salah.app.ui.ToastCard("Asr in 10 minutes", "16:03 · Singapore", onOpen = {}, onClose = {})
+                        else -> RootView(model)
+                    }
                 }
             }
         }.use { scene ->

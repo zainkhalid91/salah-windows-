@@ -1,7 +1,7 @@
 package salah.core
 
 object SalahInfo {
-    const val VERSION = "1.3.0"
+    const val VERSION = "1.4.0"
     const val CALCULATION_LIBRARY = "a Kotlin port of adhan-swift 1.4.0 (Batoul Apps, MIT License)"
     const val DOCUMENTATION_URL = "https://github.com/primayudantra/salah#readme"
     /** GitHub repository whose releases carry the Windows installer. Override with SALAH_RELEASES_REPO. */

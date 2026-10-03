@@ -117,8 +117,6 @@ object Cli {
 
     val appIsRunning: Boolean get() = AppInstance.isRunning()
 
-    private fun appName() = "the Salah app"
-
     // endregion
 
     // region today / next / schedule
@@ -679,7 +677,7 @@ object DayView {
     }
 
     fun undefinedNote(s: DaySchedule): List<Line> {
-        val (reason, suggestion) = s.undefinedExplanation ?: return emptyList()
+        val (reason, suggestion) = s.undefinedExplanation() ?: return emptyList()
         val lines = wrap(reason, 60).map { listOf(Span.accent(it)) }.toMutableList()
         if (s.times.isEmpty() && suggestion != null) lines += wrap(suggestion, 60).map { listOf(Span.dim(it)) }
         else if (s.times.isNotEmpty()) lines += listOf(Span.dim("Try: salah config set calculation.highLatitudeRule seventhOfTheNight"))

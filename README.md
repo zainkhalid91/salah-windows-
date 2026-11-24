@@ -57,9 +57,12 @@ Requires Windows 10 or 11 (64-bit). Java is bundled, so there's nothing else to 
    administrator rights. You can change the install folder if you like.
 4. **Open Salah** from the Start menu or the desktop shortcut.
 
-**Updating:** Salah checks for new versions once a day (**About → Updates**). Click **Install** to
-download the new installer and run it. You can also install a newer `.exe` over the old one; your
-settings are kept.
+**Updating:** updates are automatic. Every change pushed to `main` publishes a new release. Salah
+checks GitHub Releases at launch and every six hours, downloads the new installer in the
+background and checks its SHA-256. A banner then offers **Restart to update**; with **Install
+updates automatically** on (the default), it installs by itself while Salah is in the notification
+area and starts again there. Your settings are kept. Both switches and **Check now** are in
+**Settings → About Salah**. You can still install a newer `.exe` over the old one by hand.
 
 ## First launch
 
@@ -86,6 +89,37 @@ Salah then adds itself to **Start with Windows** and to the notification area (�
 keep arriving after you close the window.
 
 ## Features
+
+**New in 1.5, ported from Salah for macOS 1.3–1.5:**
+
+- **Home**: a greeting, today's Gregorian and Hijri date and the moment's main card (the next
+  prayer with a countdown and a verse or hadith, or on Friday after Asr, the countdown to Maghrib
+  and the last hour). Below it, widgets you choose and reorder: prayer times, du'a of the day,
+  Quran (what's playing, or Al-Kahf on Friday, Al-Mulk at night, a short surah otherwise),
+  sunnah fasting, kind word of the day and the Kind Words schedule.
+- **Quran player**: all 114 surahs from six reciters (Mishary Alafasy, Abdul Rahman Al-Sudais,
+  Saad Al-Ghamdi, Mahmoud Khalil Al-Husary, Maher Al-Muaiqly, Abdul Basit), streamed from
+  mp3quran.net. Search by name, meaning or number; Full Quran and Juz 'Amma playlists plus your
+  own; a queue with play next, reorder and remove; repeat one or all; shuffle. A mini player
+  follows you to the other tabs. It pauses when each prayer begins (optional) and picks up where
+  you left off.
+- **Focus Mode** (off by default): at prayer time, a calm full-screen card over everything, and
+  the Quran player pauses. Done (or the auto close after 10, 15 or 30 minutes) resumes it. On a
+  call (an app using the microphone) or with a full-screen app or presentation, only a small nudge,
+  then the card once you're free. Windows doesn't let apps turn on Do Not Disturb, so that
+  macOS option isn't here.
+- **Kind Words and Du'a**: gentle verses, hadith and du'as through the day, never within 45
+  minutes of a prayer, silent by default. A verse with each early reminder, "Have you prayed?"
+  after each prayer, Al-Kahf and the last hour on Friday, and du'as for the start and end of the
+  work day. A Du'a screen grouped by moment, with copy and notify. Open them from **Reminders**.
+- **Sunnah fasting**: Mondays and Thursdays, the White Days, Arafah and Ashura on Home (never in
+  Ramadan, on Eid or the days of Tashriq).
+- **13 colour themes** (**Settings → Colour theme**): Crimson (the original), Emerald, Teal,
+  Sapphire, Indigo, Amethyst, Rose, Amber, Olive, Graphite, and the earth tones Forest, Earth and
+  Clay.
+- **Automatic updates**: see [Updating](#install).
+
+**Everything else:**
 
 - **Today at a glance**: the next prayer in big pixel digits with a live countdown, and the day's
   timeline from Fajr to Isha. Sunrise is shown as the end of Fajr.
@@ -189,7 +223,8 @@ Reminders appear in the bottom-right corner with the sound you chose, e.g. *"Asr
 
 | Shortcut | Action |
 |---|---|
-| **Ctrl+1 … Ctrl+5** | Today, Schedule, Reminders, Settings, About |
+| **Ctrl+1 … Ctrl+7** | Home, Today, Quran, Calendar, Schedule, Reminders, Settings |
+| **Esc** | Close Focus Mode, Kind Words, Du'a or About and go back |
 | **Ctrl+,** | Settings |
 | **Ctrl+W** or **Ctrl+Q** | Close the window (Salah keeps running in the notification area) |
 | **Ctrl+Shift+Q** | Quit Salah completely |
@@ -334,6 +369,10 @@ Everything stays on your PC. There are no accounts, analytics, tracking or sync.
   zone) and [BigDataCloud](https://www.bigdatacloud.com/) (for the place name). This happens only
   when you click the button.
 - **Update checks** ask GitHub's public API for the latest release and send nothing about you.
+- **The Quran player** streams the surah you press play on from mp3quran.net. Nothing is fetched
+  until you press play.
+- **Focus Mode** reads, on your PC only, whether an app is using the microphone or the screen is
+  full screen. Nothing is sent anywhere.
 
 ---
 
@@ -406,10 +445,13 @@ cd salah-windows-\windows
 not the repository root. Set the Gradle JDK to 21, then run **app → Tasks → compose desktop →
 run** from the Gradle panel.
 
-**Releases:** pushing a tag such as `windows-v1.2.1` makes
+**Releases:** every push to `main` that touches `windows/` makes
 [the workflow](.github/workflows/windows.yml) build and test the installers and publish them as a
-GitHub Release. The in-app updater picks it up from there. Bump `appVersion` in
-`windows/app/build.gradle.kts` and `VERSION` in `SalahInfo.kt` first.
+GitHub Release tagged `windows-v1.5.<run number>`. Installed apps update themselves from there.
+For a new feature release, bump `BASE_VERSION` in the workflow (and `salahVersion` in
+`windows/gradle.properties` for local builds); the version reaches the installer and
+`SalahInfo.VERSION` through `-PsalahVersion`. A `windows-v*` tag still publishes that exact
+version. Developers can check Quran streaming with `.\gradlew.bat :app:run --args="--quran-probe"`.
 
 ## Project layout
 

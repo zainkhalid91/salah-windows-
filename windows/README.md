@@ -27,7 +27,7 @@ repository root, and set the Gradle JDK to 21.
 |---|---|
 | `core` | Pure Kotlin, no UI: the adhan-swift 1.4.0 port (`adhan/Adhan.kt`), `SalahConfig` + `ConfigStore` (same JSON as macOS), `ConfigKeys`, schedules and `PrayerClock`, Hijri, exporters, `NotificationPlanner`, `AppInstance` (single instance). |
 | `cli` | The `salah` command: argument parsing, box/plain/compact/JSON output, exit codes. |
-| `app` | Compose Desktop UI (`ui/`), `AppModel` (state, ticker, reminder loop), Windows integration (`platform/`: registry, PATH, location, updater, toasts, dark title bar), `Snapshot`, `CrashLog`. |
+| `app` | Compose Desktop UI (`ui/`), `AppModel` (state, ticker, reminder loop), Windows integration (`platform/`: registry, PATH, location, updater, toasts, dark title bar), the Quran player (`quran/`), Focus Mode (`focus/`), `Snapshot`, `CrashLog`. |
 
 ## Notes
 

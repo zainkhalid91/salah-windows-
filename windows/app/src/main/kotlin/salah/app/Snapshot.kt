@@ -55,7 +55,14 @@ object Snapshot {
             shot(outDir, "schedule-$sfx", config, next, dark, 940, 640, scale) { it.tab = AppModel.Tab.SCHEDULE }
             shot(outDir, "reminders-$sfx", config, next, dark, 940, 760, scale) { it.tab = AppModel.Tab.REMINDERS }
             shot(outDir, "settings-$sfx", config, next, dark, 940, 900, scale) { it.tab = AppModel.Tab.SETTINGS }
-            shot(outDir, "about-$sfx", config, next, dark, 940, 700, scale) { it.tab = AppModel.Tab.ABOUT }
+            shot(outDir, "about-$sfx", config, next, dark, 940, 1100, scale) { it.more = AppModel.More.ABOUT }
+            shot(outDir, "home-$sfx", config, next, dark, 1000, 900, scale) { it.tab = AppModel.Tab.HOME }
+            shot(outDir, "home-narrow-$sfx", config, next, dark, 720, 1300, scale) { it.tab = AppModel.Tab.HOME }
+            shot(outDir, "quran-$sfx", config, next, dark, 1000, 640, scale) { it.tab = AppModel.Tab.QURAN; it.quran.loadPaused(listOf(1, 18, 36, 67), 1) }
+            shot(outDir, "focus-mode-$sfx", config, next, dark, 940, 1000, scale) { it.more = AppModel.More.FOCUS_MODE }
+            shot(outDir, "kind-words-$sfx", config, next, dark, 940, 900, scale) { it.more = AppModel.More.KIND_WORDS }
+            shot(outDir, "dua-$sfx", config, next, dark, 940, 900, scale) { it.more = AppModel.More.DUA }
+            shot(outDir, "customize-home-$sfx", config, next, dark, 1000, 700, scale) { it.tab = AppModel.Tab.HOME; it.showCustomizeHome = true }
             shot(outDir, "location-$sfx", config, next, dark, 940, 560, scale) { it.showLocationSheet = true }
         }
         val twelve = config.copy(display = config.display.copy(use24HourClock = false))
@@ -90,6 +97,7 @@ object Snapshot {
         val tmp = Files.createTempDirectory("salah-snap").resolve("config.json")
         ConfigStore(tmp).save(config)
         val model = AppModel(ConfigStore(tmp), live = false, fixedNow = now)
+        model.tab = AppModel.Tab.TODAY
         setup(model)
         ImageComposeScene((w * scale).toInt(), (h * scale).toInt(), Density(scale)) {
             SalahTheme(dark) {

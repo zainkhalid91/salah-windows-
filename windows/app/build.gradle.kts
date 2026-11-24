@@ -19,9 +19,12 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.8.0")
     // Dark title bar (DWM) and reading Windows' app mode without spawning processes.
     implementation("net.java.dev.jna:jna-platform:5.15.0")
+    // Pure-Java MP3 decoding for the Quran player (javax.sound plays the PCM), so nothing native ships.
+    implementation("javazoom:jlayer:1.0.1")
 }
 
-val appVersion = "1.4.1"
+// gradle.properties, or -PsalahVersion=1.5.<run> from CI. MSI needs plain numbers below 256.256.65536.
+val appVersion: String = providers.gradleProperty("salahVersion").getOrElse("1.5.0")
 
 compose.desktop {
     application {

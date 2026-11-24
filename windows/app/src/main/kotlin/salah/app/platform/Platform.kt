@@ -135,7 +135,13 @@ class LocationProvider(private val scope: CoroutineScope, private val onLocation
     }
 }
 
-/** Checks GitHub Releases for a newer Windows installer, at most once a day when enabled. */
+/**
+ * Keeps Salah up to date from GitHub Releases. CI publishes a release for every push to main, so
+ * this checks at launch and every six hours, downloads a newer MSI in the background, verifies its
+ * SHA-256 against GitHub's digest, and then either waits for "Restart to update" or, with automatic
+ * installs on, installs while Salah sits in the notification area. The MSI keeps the same upgrade
+ * code, so Windows Installer replaces the old version in place, per user, without an admin prompt.
+ */
 class Updater(private val scope: CoroutineScope, private val enabled: Boolean) {
     sealed interface State {
         data object Idle : State
@@ -143,10 +149,12 @@ class Updater(private val scope: CoroutineScope, private val enabled: Boolean) {
         data object UpToDate : State
         data class Available(val release: Release) : State
         data class Downloading(val release: Release) : State
+        /** Downloaded and verified, ready to install. */
+        data class Ready(val release: Release, val file: File) : State
         data class Failed(val message: String) : State
     }
 
-    data class Release(val version: SemanticVersion, val pageUrl: String, val installerUrl: String?)
+    data class Release(val version: SemanticVersion, val pageUrl: String, val installerUrl: String?, val sha256: String?, val notes: String)
 
     val currentVersion: String = SalahInfo.VERSION
     var state by mutableStateOf<State>(State.Idle)
@@ -154,12 +162,27 @@ class Updater(private val scope: CoroutineScope, private val enabled: Boolean) {
     private val prefs = Preferences.userRoot().node("salah")
     var autoCheck by mutableStateOf(prefs.getBoolean("autoCheckUpdates", true))
         private set
+    /** Install a downloaded update by itself while the window is closed. */
+    var autoInstall by mutableStateOf(prefs.getBoolean("autoInstallUpdates", true))
+        private set
+    /** The user closed the banner for this version. */
+    var bannerDismissed by mutableStateOf<SemanticVersion?>(null)
 
-    val availableRelease: Release? get() = (state as? State.Available)?.release
+    val availableRelease: Release?
+        get() = when (val s = state) {
+            is State.Available -> s.release
+            is State.Ready -> s.release
+            else -> null
+        }
 
     fun changeAutoCheck(v: Boolean) {
         autoCheck = v
         runCatching { prefs.putBoolean("autoCheckUpdates", v) }
+    }
+
+    fun changeAutoInstall(v: Boolean) {
+        autoInstall = v
+        runCatching { prefs.putBoolean("autoInstallUpdates", v) }
     }
 
     fun start() {
@@ -168,14 +191,14 @@ class Updater(private val scope: CoroutineScope, private val enabled: Boolean) {
             delay(5_000)
             while (true) {
                 val last = prefs.getLong("lastUpdateCheck", 0)
-                if (autoCheck && System.currentTimeMillis() - last > 24 * 3600_000L) check(userInitiated = false)
-                delay(3600_000L)
+                if (autoCheck && System.currentTimeMillis() - last > CHECK_EVERY_MS && state !is State.Ready) check(userInitiated = false)
+                delay(15 * 60_000L)
             }
         }
     }
 
     fun check(userInitiated: Boolean) {
-        if (state is State.Checking) return
+        if (state is State.Checking || state is State.Downloading) return
         state = State.Checking
         scope.launch {
             val result = withContext(Dispatchers.IO) { runCatching { fetchLatest() } }
@@ -187,28 +210,74 @@ class Updater(private val scope: CoroutineScope, private val enabled: Boolean) {
                 },
                 onFailure = { if (userInitiated) State.Failed(it.message ?: "network error") else State.Idle },
             )
+            // Fetch it straight away, so installing is one click (or none).
+            val available = state as? State.Available
+            if (available != null && (autoCheck || userInitiated) && Platform.isWindows && available.release.installerUrl != null) download(available.release)
         }
     }
 
-    /** Downloads the MSI and hands it to Windows Installer, then quits so files can be replaced. */
-    fun install(release: Release, quit: () -> Unit) {
-        val url = release.installerUrl
-        if (url == null || !Platform.isWindows) {
-            WindowsIntegration.openUrl(release.pageUrl)
-            return
-        }
+    /** Downloads the MSI to the temp folder and checks its digest. */
+    fun download(release: Release) {
+        val url = release.installerUrl ?: return WindowsIntegration.openUrl(release.pageUrl)
+        if (state is State.Downloading) return
         state = State.Downloading(release)
         scope.launch {
-            val ok = withContext(Dispatchers.IO) {
+            val result = withContext(Dispatchers.IO) {
                 runCatching {
-                    val target = File(System.getProperty("java.io.tmpdir"), "Salah-${release.version}.msi")
-                    val res = http.send(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofMinutes(5)).build(), HttpResponse.BodyHandlers.ofFile(target.toPath()))
+                    val dir = File(System.getProperty("java.io.tmpdir"), "Salah-updates").apply { mkdirs() }
+                    // Older downloads are useless once a newer one exists.
+                    dir.listFiles()?.forEach { if (it.name != "Salah-${release.version}.msi") it.delete() }
+                    val target = File(dir, "Salah-${release.version}.msi")
+                    val part = File(dir, target.name + ".part")
+                    val res = http.send(
+                        HttpRequest.newBuilder(URI.create(url)).header("User-Agent", "Salah-Windows/$currentVersion").timeout(Duration.ofMinutes(10)).build(),
+                        HttpResponse.BodyHandlers.ofFile(part.toPath()),
+                    )
                     check(res.statusCode() in 200..299) { "HTTP ${res.statusCode()}" }
-                    ProcessBuilder("msiexec", "/i", target.absolutePath).start()
+                    val expected = release.sha256
+                    if (expected != null) {
+                        check(sha256(part).equals(expected, ignoreCase = true)) { "the download didn't match its checksum" }
+                    }
+                    Files.move(part.toPath(), target.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                    target
                 }
             }
-            ok.onSuccess { quit() }.onFailure { state = State.Failed(it.message ?: "download failed") }
+            state = result.fold({ State.Ready(release, it) }, { State.Failed(it.message ?: "download failed") })
         }
+    }
+
+    /**
+     * Installs the downloaded MSI quietly (a small progress window, no questions), then starts the
+     * new version. [background] starts it in the notification area, as after an automatic install.
+     */
+    fun install(quit: () -> Unit, background: Boolean = false) {
+        when (val s = state) {
+            is State.Available -> download(s.release)
+            is State.Ready -> {
+                if (!Platform.isWindows || !s.file.isFile) return WindowsIntegration.openUrl(s.release.pageUrl)
+                val exe = WindowsIntegration.appExe
+                val q = '"'
+                val script = File(s.file.parentFile, "install.cmd")
+                script.writeText(
+                    buildString {
+                        appendLine("@echo off")
+                        // Let this copy of Salah exit and release its files first.
+                        appendLine("ping -n 3 127.0.0.1 >nul")
+                        appendLine("msiexec /i $q${s.file.absolutePath}$q /passive /norestart")
+                        if (exe != null) appendLine("start $q$q $q$exe$q" + if (background) " --background" else "")
+                    },
+                )
+                runCatching { ProcessBuilder("cmd.exe", "/c", script.absolutePath).start() }
+                    .onSuccess { quit() }
+                    .onFailure { state = State.Failed(it.message ?: "couldn't start the installer") }
+            }
+            else -> Unit
+        }
+    }
+
+    /** Called about once a minute: installs a ready update when nobody is looking. */
+    fun maybeInstallQuietly(windowVisible: Boolean, busy: Boolean, quit: () -> Unit) {
+        if (autoInstall && !windowVisible && !busy && state is State.Ready && WindowsIntegration.appExe != null) install(quit, background = true)
     }
 
     private val http by lazy { HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).connectTimeout(Duration.ofSeconds(10)).build() }
@@ -226,8 +295,28 @@ class Updater(private val scope: CoroutineScope, private val enabled: Boolean) {
         val page = (o["html_url"] as? JsonPrimitive)?.contentOrNull ?: SalahInfo.releasesUrl
         val msi = (o["assets"] as? JsonArray)?.mapNotNull { it as? JsonObject }
             ?.firstOrNull { (it["name"] as? JsonPrimitive)?.contentOrNull?.endsWith(".msi", ignoreCase = true) == true }
-            ?.let { (it["browser_download_url"] as? JsonPrimitive)?.contentOrNull }
-        return Release(version, page, msi)
+        val url = msi?.let { (it["browser_download_url"] as? JsonPrimitive)?.contentOrNull }
+        // GitHub reports "sha256:<hex>" for each uploaded asset.
+        val sha = msi?.let { (it["digest"] as? JsonPrimitive)?.contentOrNull }?.takeIf { it.startsWith("sha256:") }?.removePrefix("sha256:")
+        val notes = (o["body"] as? JsonPrimitive)?.contentOrNull.orEmpty()
+        return Release(version, page, url, sha, notes)
+    }
+
+    private fun sha256(f: File): String {
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        f.inputStream().use { input ->
+            val buf = ByteArray(64 * 1024)
+            while (true) {
+                val n = input.read(buf)
+                if (n < 0) break
+                md.update(buf, 0, n)
+            }
+        }
+        return md.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    companion object {
+        private const val CHECK_EVERY_MS = 6 * 3600_000L
     }
 }
 

@@ -39,6 +39,7 @@ import salah.app.ui.LocalWindowChrome
 import salah.app.ui.Localized
 import salah.app.ui.ResizeEdges
 import salah.app.ui.RootView
+import salah.app.ui.FocusCardWindow
 import salah.app.ui.SalahTheme
 import salah.app.ui.ScheduleSpan
 import salah.app.ui.ToastCard
@@ -94,6 +95,11 @@ fun main(args: Array<String>) {
 }
 
 private fun run(args: Array<String>) {
+    // Developer check of Quran streaming: plays, seeks and lets a surah end, printing what happens.
+    if ("--quran-probe" in args) {
+        salah.app.quran.QuranProbe.run()
+        exitProcess(0)
+    }
     val snapshot = args.indexOf("--snapshot")
     if (snapshot >= 0) {
         Snapshot.renderAll(File(args.getOrNull(snapshot + 1) ?: "snapshots"))
@@ -109,7 +115,7 @@ private fun run(args: Array<String>) {
         val model = remember { AppModel() }
         val trayEnabled = model.config.display.showMenuBarExtra && SystemTray.isSupported()
         var windowOpen by remember { mutableStateOf(!startHidden || !trayEnabled) }
-        val windowState = rememberWindowState(size = DpSize(940.dp, 560.dp), position = WindowPosition(Alignment.Center))
+        val windowState = rememberWindowState(size = DpSize(1000.dp, 620.dp), position = WindowPosition(Alignment.Center))
         var bringToFront by remember { mutableStateOf(0) }
 
         fun quitCompletely() {
@@ -180,24 +186,35 @@ private fun run(args: Array<String>) {
 
         if (trayEnabled) NotificationAreaIcon(model, dark, onQuit = ::quitCompletely)
         ToastHost(model, dark)
+        model.focus.card?.let { card -> FocusCardWindow(model, card, dark) }
+        // Busy at prayer time: a nudge in the corner instead of the card.
+        val nudge = model.focus.nudge
+        LaunchedEffect(nudge) {
+            if (nudge == null) return@LaunchedEffect
+            val lang = model.config.display.lang
+            val body = salah.core.AppText.t(lang, if (nudge.cardLater) "The card will show once you're free." else "Take a moment when you can.")
+            model.notifier.show(salah.core.AppText.t(lang, "Time for {0}", nudge.label), body, salah.core.ReminderSound.SILENT) { model.showMainWindow() }
+            model.focus.dismissNudge()
+        }
     }
 }
 
-/** Ctrl+1–5 switch screens, Ctrl+, opens Settings, Ctrl+W/Ctrl+Q close to the tray, Ctrl+Shift+Q quits. */
+/** Ctrl+1–7 switch screens, Esc closes an opened screen, Ctrl+, opens Settings, Ctrl+W/Ctrl+Q close to the tray, Ctrl+Shift+Q quits. */
 private fun handleKey(e: KeyEvent, model: AppModel, close: () -> Unit, quit: () -> Unit): Boolean {
     if (e.type != KeyEventType.KeyDown) return false
     if (e.isCtrlPressed) {
         val tabs = AppModel.Tab.entries
-        val index = listOf(Key.One, Key.Two, Key.Three, Key.Four, Key.Five).indexOf(e.key)
+        val index = listOf(Key.One, Key.Two, Key.Three, Key.Four, Key.Five, Key.Six, Key.Seven).indexOf(e.key)
         when {
-            index in tabs.indices -> { model.tab = tabs[index]; return true }
-            e.key == Key.Comma -> { model.tab = AppModel.Tab.SETTINGS; return true }
+            index in tabs.indices -> { model.open(tabs[index]); return true }
+            e.key == Key.Comma -> { model.open(AppModel.Tab.SETTINGS); return true }
             e.key == Key.Q && e.isShiftPressed -> { quit(); return true }
             e.key == Key.Q || e.key == Key.W -> { close(); return true }
         }
         return false
     }
     if (model.showLocationSheet) return false
+    if (e.key == Key.Escape && model.more != null) { model.more = null; return true }
     when (model.tab) {
         AppModel.Tab.TODAY -> when (e.key) {
             Key.Escape -> if (model.detailPrayer != null || model.previewDate != null) {

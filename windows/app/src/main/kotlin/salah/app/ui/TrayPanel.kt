@@ -77,7 +77,7 @@ fun TrayPanel(model: AppModel, onOpen: () -> Unit = {}, onQuit: () -> Unit = {})
             HorizontalDivider(color = c.line)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Label(tr("Salah {0} is available", r.version), size = 12.5f, weight = FontWeight.Medium, modifier = Modifier.weight(1f))
-                AccentButton(tr("Update")) { model.updater.install(r) { model.onQuitCompletely() } }
+                AccentButton(tr("Update")) { model.updater.install({ model.onQuitCompletely() }) }
             }
         }
         Spacer(Modifier.weight(1f))

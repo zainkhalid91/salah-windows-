@@ -72,6 +72,24 @@ fun RemindersScreen(model: AppModel) {
 
         SettingsGroup {
             row {
+                SettingsRow(tr("Focus Mode"), tr(if (model.config.focusMode.enabled) "On · a calm card at prayer time" else "Off · a calm card at prayer time")) {
+                    SecondaryButton(tr("Open")) { model.open(AppModel.More.FOCUS_MODE) }
+                }
+            }
+            row {
+                SettingsRow(tr("Kind Words"), tr(if (model.config.kindWords.enabled) "On · gentle verses and du'as through the day" else "Off · gentle verses and du'as through the day")) {
+                    SecondaryButton(tr("Open")) { model.open(AppModel.More.KIND_WORDS) }
+                }
+            }
+            row {
+                SettingsRow(tr("Du'a"), tr("Du'as for the moments of the day")) {
+                    SecondaryButton(tr("Open")) { model.open(AppModel.More.DUA) }
+                }
+            }
+        }
+
+        SettingsGroup {
+            row {
                 SettingsRow(tr("Sound")) {
                     DropdownPicker(ReminderSound.entries.map { it to tr(it.displayName) }, r.sound, { v ->
                         model.update { it.copy(reminders = it.reminders.copy(sound = v)) }

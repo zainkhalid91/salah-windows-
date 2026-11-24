@@ -29,20 +29,29 @@ fun RootView(model: AppModel) {
         Column(Modifier.fillMaxSize()) {
             TabBar(model)
             HorizontalDivider(color = c.line, thickness = 1.dp)
-            Box(Modifier.fillMaxSize()) {
+            UpdateBanner(model)
+            Box(Modifier.weight(1f).fillMaxWidth()) {
                 val error = model.configError
+                val more = model.more
                 if (error != null) {
                     InvalidConfigView(model, error)
+                } else if (more != null) {
+                    MoreScreen(model, more)
                 } else {
                     when (model.tab) {
+                        AppModel.Tab.HOME -> HomeScreen(model)
                         AppModel.Tab.TODAY -> TodayScreen(model)
+                        AppModel.Tab.QURAN -> QuranScreen(model)
                         AppModel.Tab.CALENDAR -> CalendarScreen(model)
                         AppModel.Tab.SCHEDULE -> ScheduleScreen(model)
                         AppModel.Tab.REMINDERS -> RemindersScreen(model)
                         AppModel.Tab.SETTINGS -> SettingsScreen(model)
-                        AppModel.Tab.ABOUT -> AboutScreen(model)
                     }
                 }
+            }
+            // The mini player follows you around while something is queued.
+            if (model.configError == null && model.quran.queue != null && (model.tab != AppModel.Tab.QURAN || model.more != null) && model.config.quran.showInMenuBar) {
+                MiniPlayer(model, onOpen = { model.open(AppModel.Tab.QURAN) })
             }
         }
         if (model.showLocationSheet) LocationSheet(model)
@@ -69,7 +78,7 @@ private fun TabBar(model: AppModel) {
                 }
                 // The tabs sit in the middle of whatever space is left, so they never run into the edges.
                 Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    PillPicker(AppModel.Tab.entries.map { it to tr(it.title) }, model.tab, { model.tab = it; if (it != AppModel.Tab.TODAY) model.clearDetail() })
+                    PillPicker(AppModel.Tab.entries.map { it to tr(it.title) }, model.tab, { model.open(it) })
                 }
                 if (roomy) Label(tr(model.reminderStatus), size = 12f, color = c.secondary, maxLines = 1, modifier = Modifier.padding(horizontal = 12.dp))
                 if (chrome != null) CaptionButtons(chrome, Modifier.padding(start = if (roomy) 0.dp else 12.dp))
@@ -93,5 +102,29 @@ private fun InvalidConfigView(model: AppModel, message: String) {
             }
             Label(tr(tr("Resetting replaces the file with defaults. You'll need to set your location again.")), size = 12f, color = c.secondary)
         }
+    }
+}
+
+/** "Salah 1.5.12 is ready" under the tab bar, once an update has downloaded (or can be). */
+@Composable
+private fun UpdateBanner(model: AppModel) {
+    val c = palette
+    val u = model.updater
+    val r = u.availableRelease ?: return
+    if (u.bannerDismissed == r.version) return
+    val ready = u.state is salah.app.platform.Updater.State.Ready
+    Row(
+        Modifier.fillMaxWidth().background(c.accent.copy(alpha = 0.12f)).padding(horizontal = 16.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Label(
+            tr(if (ready) "Salah {0} is ready. Restart to update." else "Salah {0} is available.", r.version),
+            weight = FontWeight.Medium, modifier = Modifier.weight(1f), maxLines = 1,
+        )
+        LinkButton(tr("What's new"), size = 12f) { salah.app.platform.WindowsIntegration.openUrl(r.pageUrl) }
+        LinkButton(tr("Later"), size = 12f, color = c.secondary) { u.bannerDismissed = r.version }
+        if (ready) AccentButton(tr("Restart to update")) { u.install({ model.onQuitCompletely() }) }
+        else AccentButton(tr("Download")) { u.download(r) }
     }
 }

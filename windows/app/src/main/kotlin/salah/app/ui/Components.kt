@@ -392,7 +392,7 @@ fun SettingsRow(label: String, hint: String? = null, control: @Composable RowSco
 
 /** Pane scaffold for the non-Today screens. */
 @Composable
-fun Pane(title: String, subtitle: String? = null, scroll: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
+fun Pane(title: String, subtitle: String? = null, scroll: Boolean = true, onBack: (() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
     val c = palette
     val state = rememberScrollState()
     Box(Modifier.fillMaxSize().background(c.background)) {
@@ -401,6 +401,9 @@ fun Pane(title: String, subtitle: String? = null, scroll: Boolean = true, conten
                 .padding(horizontal = 30.dp, vertical = 26.dp),
         ) {
             Column(Modifier.widthIn(max = 720.dp)) {
+                if (onBack != null) {
+                    LinkButton(if (LocalLang.current.rtl) "›  " + tr("Back") else "‹  " + tr("Back"), size = 13f, modifier = Modifier.padding(bottom = 6.dp), onClick = onBack)
+                }
                 Label(title, size = 20f, weight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 4.dp))
                 if (subtitle != null) Label(subtitle, color = c.secondary, modifier = Modifier.padding(bottom = 20.dp))
                 content()

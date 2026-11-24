@@ -46,11 +46,20 @@ class AppModel(
     private val live: Boolean = true,
     fixedNow: Instant? = null,
 ) {
-    enum class Tab(val title: String) { TODAY("Today"), CALENDAR("Calendar"), SCHEDULE("Schedule"), REMINDERS("Reminders"), SETTINGS("Settings"), ABOUT("About") }
+    enum class Tab(val title: String) {
+        HOME("Home"), TODAY("Today"), QURAN("Quran"), CALENDAR("Calendar"), SCHEDULE("Schedule"), REMINDERS("Reminders"), SETTINGS("Settings"),
+    }
+
+    /** Screens opened from a tab (with a back arrow) instead of having their own. */
+    enum class More(val title: String) { FOCUS_MODE("Focus Mode"), KIND_WORDS("Kind Words"), DUA("Du'a"), ABOUT("About") }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    var tab by mutableStateOf(Tab.TODAY)
+    var tab by mutableStateOf(Tab.HOME)
+    /** A screen shown over the current tab, with a back arrow. */
+    var more by mutableStateOf<More?>(null)
+    var showCustomizeHome by mutableStateOf(false)
+    var showQueue by mutableStateOf(false)
     var config by mutableStateOf(SalahConfig.DEFAULT)
         private set
     /** Set when the config file exists but can't be read. The dashboard shows a reset action. */
@@ -81,6 +90,8 @@ class AppModel(
     val locationProvider = LocationProvider(scope) { setLocation(it) }
     val updater = Updater(scope, enabled = live)
     val notifier = Notifier()
+    val quran = salah.app.quran.QuranPlayer(scope, { config.quran }, { body -> update { it.copy(quran = body(it.quran)) } }, live)
+    val focus = salah.app.focus.FocusModeRunner(scope, { config }, pauseMedia = { quran.pauseForPrayer() }, resumeMedia = { quran.resume() })
 
     private var watcher: ConfigWatcher? = null
     private val wake = Channel<Unit>(Channel.CONFLATED)
@@ -89,6 +100,10 @@ class AppModel(
     private val delivered = LinkedHashSet<String>()
     private var lastPlan: List<PlannedNotification> = emptyList()
     private var lastAlerts: List<PlannedAlert> = emptyList()
+    private var lastMoments: List<PrayerMoment> = emptyList()
+
+    /** The start of one of the five prayers: Focus Mode and the Quran player act on it. */
+    private data class PrayerMoment(val id: String, val prayer: Prayer, val time: Instant, val date: LocalDate, val label: String)
     private var jobs = mutableListOf<Job>()
 
     init {
@@ -120,6 +135,17 @@ class AppModel(
     fun today(at: Instant = now): LocalDate = localDate(at, zone)
 
     fun clock(t: Instant): String = TimeFormatting.clock(t, zone, config.display.use24HourClock, lang = config.display.lang)
+
+    /** Switches tab, closing any screen opened over the old one. */
+    fun open(t: Tab) {
+        tab = t
+        more = null
+        if (t != Tab.TODAY) clearDetail()
+    }
+
+    fun open(m: More) {
+        more = m
+    }
 
     fun clearDetail() {
         detailPrayer = null
@@ -262,7 +288,8 @@ class AppModel(
                 if (p.fireDate <= nowI && p.id !in delivered) {
                     delivered += p.id
                     if (nowI.epochSecond - p.fireDate.epochSecond <= 300) {
-                        notifier.show(p.title, p.body, config.reminders.sound, NotificationPlanner.playsAzan(p, config.reminders)) { showMainWindow() }
+                        val sound = if (p.silent) salah.core.ReminderSound.SILENT else config.reminders.sound
+                        notifier.show(p.title, p.body, sound, NotificationPlanner.playsAzan(p, config.reminders)) { showMainWindow() }
                     }
                 }
             }
@@ -272,15 +299,24 @@ class AppModel(
                     if (nowI.epochSecond - a.fireDate.epochSecond <= 300) notifier.show(a.title, a.body, config.reminders.sound) { showMainWindow() }
                 }
             }
+            for (m in lastMoments) {
+                if (m.time <= nowI && m.id !in delivered) {
+                    delivered += m.id
+                    if (nowI.epochSecond - m.time.epochSecond <= 600) prayerStarted(m)
+                }
+            }
             while (delivered.size > 200) delivered.remove(delivered.first())
+            updater.maybeInstallQuietly(windowVisible || trayPanelOpen, busy = quran.isPlaying || focus.card != null) { onQuitCompletely() }
             val plan = withContext(Dispatchers.Default) { NotificationPlanner.plan(nowI, config) }
             // Islamic date alerts (new month, special days), in the app's language.
             val alerts = withContext(Dispatchers.Default) { IslamicAlertPlanner.plan(nowI, config, config.display.lang.locale()) }
+            val moments = withContext(Dispatchers.Default) { prayerMoments(nowI) }
             lastPlan = plan
             lastAlerts = alerts
+            lastMoments = moments
             scheduled = plan
             plannedDay = localDate(nowI, zone)
-            val next = listOfNotNull(plan.firstOrNull()?.fireDate, alerts.firstOrNull()?.fireDate).minOrNull()
+            val next = listOfNotNull(plan.firstOrNull()?.fireDate, alerts.firstOrNull()?.fireDate, moments.firstOrNull { it.time > nowI }?.time).minOrNull()
             val untilNext = next?.let { it.toEpochMilli() - System.currentTimeMillis() } ?: Long.MAX_VALUE
             val wait = untilNext.coerceIn(0, 60_000)
             withTimeoutOrNull(wait) {
@@ -288,6 +324,26 @@ class AppModel(
                 delay(300) // debounce bursts of edits
             }
         }
+    }
+
+    /** The next two days' prayer starts, whether or not a reminder is set for them. */
+    private fun prayerMoments(nowI: Instant): List<PrayerMoment> {
+        val loc = config.location?.takeIf { it.isValid } ?: return emptyList()
+        val start = localDate(nowI, loc.zone)
+        val lang = config.display.lang
+        return PrayerSchedule.range(start.minusDays(1), 3, loc, config.calculation).flatMap { day ->
+            Prayer.prayers.mapNotNull { p ->
+                val t = day.time(p) ?: return@mapNotNull null
+                PrayerMoment("moment.${day.date}.${p.raw}", p, t, day.date, day.label(p, config.display.jumuahRelabel, lang))
+            }
+        }.filter { it.time.epochSecond > nowI.epochSecond - 600 }.sortedBy { it.time }
+    }
+
+    private fun prayerStarted(m: PrayerMoment) {
+        // Focus Mode's own pause wins when it's on for this prayer, so Done can resume.
+        val focusPauses = config.focusMode.let { it.enabled && m.prayer in it.prayers && it.pauseMedia.enabled }
+        if (config.quran.pauseAtPrayerTime && !focusPauses) quran.pauseForPrayer()
+        focus.prayerStarted(m.prayer, m.label, m.time, m.date)
     }
 
     fun sendTestNotification() {
@@ -322,6 +378,7 @@ class AppModel(
     }
 
     fun dispose() {
+        quran.dispose()
         watcher?.close()
         notifier.dispose()
         scope.cancel()

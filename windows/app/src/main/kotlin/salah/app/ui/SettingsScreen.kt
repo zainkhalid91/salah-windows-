@@ -1,9 +1,11 @@
 package salah.app.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -129,6 +131,12 @@ fun SettingsScreen(model: AppModel) {
                 }
             }
             row {
+                SettingsRow(tr("Colour theme")) {
+                    DropdownPicker(AccentColor.entries.map { it to tr(it.title) }, AccentColor.current, { AccentColor.select(it) })
+                    AccentSwatch(AccentColor.current)
+                }
+            }
+            row {
                 SettingsRow(tr("Start with Windows"), model.loginItemMessage ?: tr("Keeps reminders coming; Salah starts quietly in the notification area")) {
                     SalahSwitch(c.launchAtLogin) { v -> model.update { it.copy(launchAtLogin = v) } }
                 }
@@ -138,6 +146,12 @@ fun SettingsScreen(model: AppModel) {
                     DropdownPicker(MenuBarStyle.entries.map { it to tr(it.displayName) }, c.display.menuBarStyle, { v -> display { it.copy(menuBarStyle = v) } }, enabled = c.display.showMenuBarExtra)
                     SalahSwitch(c.display.showMenuBarExtra) { v -> display { it.copy(showMenuBarExtra = v) } }
                 }
+            }
+        }
+
+        SettingsGroup {
+            row {
+                SettingsRow(tr("Updates"), updateHint(model)) { SecondaryButton(tr("About Salah")) { model.open(AppModel.More.ABOUT) } }
             }
         }
 
@@ -168,10 +182,10 @@ private fun AngleStepper(label: String, value: Double, onChange: (Double) -> Uni
 }
 
 @Composable
-fun AboutScreen(model: AppModel) {
+fun AboutScreen(model: AppModel, onBack: (() -> Unit)? = null) {
     val pal = palette
     var cliMessage by remember { mutableStateOf<String?>(null) }
-    Pane(tr("About Salah"), tr("Version {0} for Windows", model.updater.currentVersion)) {
+    Pane(tr("About Salah"), tr("Version {0} for Windows", model.updater.currentVersion), onBack = onBack) {
         UpdatesGroup(model)
         SettingsGroup {
             row {
@@ -190,6 +204,19 @@ fun AboutScreen(model: AppModel) {
             row { About(tr("City search"), tr("City search uses Open-Meteo's geocoding service, and naming a coordinate uses BigDataCloud, so search queries and a coordinate lookup are sent to them.")) }
         }
         SettingsGroup {
+            row { About(tr("Quran recitations"), tr("Streamed from mp3quran.net when you press play. Surah names and meanings from Tanzil, as in the macOS app.")) }
+            row { About(tr("Kind Words and Du'a"), tr("Verses, hadith and du'as from the macOS app's library, with their sources.")) }
+        }
+        SettingsGroup {
+            row {
+                SettingsRow(tr("Website")) { LinkButton("salah.techwithprima.com", size = 13f) { WindowsIntegration.openUrl("https://salah.techwithprima.com") } }
+            }
+            row {
+                SettingsRow(tr("Questions and ideas")) { LinkButton(tr("Discussions"), size = 13f) { WindowsIntegration.openUrl("https://github.com/primayudantra/salah/discussions") } }
+            }
+            row {
+                SettingsRow(tr("Report a problem")) { LinkButton(tr("Issues"), size = 13f) { WindowsIntegration.openUrl("https://github.com/${SalahInfo.repository}/issues") } }
+            }
             row {
                 SettingsRow(tr("Original macOS app")) { LinkButton("github.com/primayudantra/salah", size = 13f) { WindowsIntegration.openUrl(SalahInfo.DOCUMENTATION_URL) } }
             }
@@ -216,18 +243,26 @@ private fun UpdatesGroup(model: AppModel) {
         Updater.State.UpToDate -> tr("Up to date ({0})", u.currentVersion)
         is Updater.State.Available -> tr("Version {0} is available", s.release.version)
         is Updater.State.Downloading -> tr("Downloading {0}…", s.release.version)
+        is Updater.State.Ready -> tr("Version {0} is ready to install", s.release.version)
         is Updater.State.Failed -> tr("Last check failed: {0}", s.message)
     }
     SettingsGroup {
         row {
             SettingsRow(tr("Updates"), status) {
-                val r = u.availableRelease
-                if (r != null && !busy) AccentButton(tr("Install {0}…", r.version)) { u.install(r) { model.onQuitCompletely() } }
-                else SecondaryButton(tr("Check now"), enabled = !busy) { u.check(userInitiated = true) }
+                when (val s = u.state) {
+                    is Updater.State.Ready -> AccentButton(tr("Restart to update")) { u.install({ model.onQuitCompletely() }) }
+                    is Updater.State.Available -> AccentButton(tr("Download {0}", s.release.version)) { u.download(s.release) }
+                    else -> SecondaryButton(tr("Check now"), enabled = !busy) { u.check(userInitiated = true) }
+                }
             }
         }
         row {
-            SettingsRow(tr("Check for updates automatically"), tr("Once a day, from GitHub Releases")) { SalahSwitch(u.autoCheck) { u.changeAutoCheck(it) } }
+            SettingsRow(tr("Check for updates automatically"), tr("At launch and every six hours, from GitHub Releases")) { SalahSwitch(u.autoCheck) { u.changeAutoCheck(it) } }
+        }
+        row {
+            SettingsRow(tr("Install updates automatically"), tr("While Salah is in the notification area, then it starts again")) {
+                SalahSwitch(u.autoInstall, enabled = u.autoCheck) { u.changeAutoInstall(it) }
+            }
         }
     }
 }
@@ -237,5 +272,25 @@ private fun About(title: String, text: String) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Label(title, weight = FontWeight.Medium)
         Label(text, color = palette.secondary)
+    }
+}
+
+/** A small dot in the theme's accent colour beside the picker. */
+@Composable
+private fun AccentSwatch(a: AccentColor) {
+    val dark = palette.isDark
+    androidx.compose.foundation.layout.Box(
+        Modifier.padding(start = 2.dp).size(14.dp)
+            .background(androidx.compose.ui.graphics.Color(if (dark) a.darkAccent else a.lightAccent), androidx.compose.foundation.shape.CircleShape),
+    )
+}
+
+@Composable
+private fun updateHint(model: AppModel): String {
+    val u = model.updater
+    return when (val s = u.state) {
+        is Updater.State.Ready -> tr("Version {0} is ready to install", s.release.version)
+        is Updater.State.Available -> tr("Version {0} is available", s.release.version)
+        else -> tr("Version {0} · checks GitHub Releases automatically", u.currentVersion)
     }
 }
